@@ -12,9 +12,11 @@ Sérialisation des modèles de base du système
 from .user_serializers import RSUUserSerializer, RSUUserCreateSerializer, RSUUserUpdateSerializer, RSUUserMinimalSerializer
 from .audit_serializers import AuditLogSerializer
 
+from .base_serializers import BaseModelSerializer
+
 
 __all__ = [
     'RSUUserSerializer', 'RSUUserCreateSerializer', 'RSUUserUpdateSerializer', RSUUserMinimalSerializer,
-    'AuditLogSerializer'
+    'AuditLogSerializer', 'BaseModelSerializer'
 ]
 

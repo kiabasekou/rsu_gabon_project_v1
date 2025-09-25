@@ -10,6 +10,8 @@ Serializers de base pour héritage
 """
 from rest_framework import serializers
 from apps.core_app.models.base import BaseModel
+from apps.core_app.serializers.user_serializers import RSUUserMinimalSerializer
+
 
 class BaseModelSerializer(serializers.ModelSerializer):
     """
