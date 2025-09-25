@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: rsu_gabon_db
+      POSTGRES_USER: rsu_user
+      POSTGRES_PASSWORD: rsu_secure_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/sample-data:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - rsu_network
+
+  # Redis pour cache et sessions
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - rsu_network
+
+  # Backend Django
+  backend:
+    build: ./rsu_identity_backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgresql://rsu_user:rsu_secure_password@postgres:5432/rsu_gabon_db
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./rsu_identity_backend:/app
+    networks:
+      - rsu_network
+
+volumes:
+  postgres_data:
+
+networks:
+  rsu_network:
+    driver: bridge
