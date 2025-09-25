@@ -5,6 +5,7 @@ Standards Top 1% - Sécurité & Performance
 import os
 from pathlib import Path
 from decouple import config
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -205,3 +206,82 @@ RSU_ID_PREFIX = 'RSU-GA-'
 
 AUTH_USER_MODEL = 'core_app.RSUUser'
 
+
+# Ajout à la fin du fichier base.py
+
+# API Documentation avec Spectacular
+SPECTACULAR_SETTINGS = {
+    'TITLE': '🇬🇦 RSU Gabon API',
+    'DESCRIPTION': 'Registre Social Unifié - APIs Gouvernementales\n\n'
+                  'Système de gestion des identités et programmes sociaux du Gabon.\n'
+                  'Financé par la Banque Mondiale dans le cadre du Projet Digital Gabon.\n\n'
+                  '**Authentification requise** : JWT Token\n'
+                  '**Permissions** : Basées sur le type d\'utilisateur (ADMIN, SUPERVISOR, SURVEYOR, etc.)',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/v1/',
+    'DEFAULT_GENERATOR_CLASS': 'drf_spectacular.generators.SchemaGenerator',
+    
+    # Personnalisation interface
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+        'defaultModelsExpandDepth': 2,
+    },
+    
+    # Métadonnées projet
+    'CONTACT': {
+        'name': 'Équipe RSU Gabon',
+        'email': 'support@rsu.gouv.ga'
+    },
+    'LICENSE': {
+        'name': 'Gouvernement du Gabon',
+    },
+    
+    # Tags pour organisation
+    'TAGS': [
+        {
+            'name': 'Core',
+            'description': 'Gestion des utilisateurs et audit system'
+        },
+        {
+            'name': 'Identity', 
+            'description': 'Identités personnelles et ménages'
+        },
+        {
+            'name': 'Programs',
+            'description': 'Programmes sociaux et bénéficiaires'
+        }
+    ]
+}
+
+# CORS pour développement mobile
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",  # React Native Metro
+        "http://localhost:8081",  # Expo Dev
+        "http://127.0.0.1:3000",
+        "exp://localhost:19000",  # Expo
+    ]
+else:
+    CORS_ALLOWED_ORIGINS = [
+        "https://rsu-mobile.gouv.ga",
+        "https://dashboard.rsu.gouv.ga",
+    ]
+
+# Pagination par défaut
+REST_FRAMEWORK['PAGE_SIZE'] = 50
+
+# Rate limiting pour production
+if not DEBUG:
+    REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ]
+    REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+        'anon': '100/hour',
+        'user': '1000/hour'
+    }
