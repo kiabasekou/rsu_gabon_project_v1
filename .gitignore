@@ -58,7 +58,13 @@ data/backups/
 data/personal-data/
 compliance/sensitive/
 
+
 # Certificates
 *.crt
 *.csr
 certificates/
+
+# Build outputs
+build/
+dist/
+staticfiles/
