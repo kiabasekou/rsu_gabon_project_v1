@@ -264,21 +264,27 @@ class PersonIdentity(BaseModel):
         verbose_name="Notes"
     )
     
-    def save(self, *args, **kwargs):
-        # CORRECTION: Appel correct de la fonction generate_rsu_id
-        if not self.rsu_id:
-            self.rsu_id = generate_rsu_id()  # Fonction importée, pas méthode d'instance
-        super().save(*args, **kwargs)
-
     def clean(self):
-        # CORRECTION: Appel correct dans clean aussi
+        """Validation et génération automatique RSU-ID"""
+        # ✅ CORRECTION: Générer RSU-ID AVANT validation si manquant
         if not self.rsu_id:
-            self.rsu_id = generate_rsu_id()  # Fonction importée, pas méthode d'instance
+            from utils.gabonese_data import generate_rsu_id
+            self.rsu_id = generate_rsu_id()
         
         # Validation dates
         if self.birth_date and self.birth_date > django_timezone.now().date():
             from django.core.exceptions import ValidationError
             raise ValidationError("La date de naissance ne peut pas être dans le futur")
+        
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        """Sauvegarde avec génération automatique RSU-ID"""
+        # ✅ CORRECTION: Générer RSU-ID AVANT sauvegarde si manquant
+        if not self.rsu_id:
+            from utils.gabonese_data import generate_rsu_id
+            self.rsu_id = generate_rsu_id()
+        super().save(*args, **kwargs)
     
     @property
     def full_name(self):
@@ -287,12 +293,19 @@ class PersonIdentity(BaseModel):
     
     @property
     def age(self):
-        """Calcul de l'âge en années"""
+        """Calcul de l'âge en années avec gestion des types de données"""
         if not self.birth_date:
             return None
+        
+        # ✅ CORRECTION: Gestion des types de données (str ou date)
+        birth_date = self.birth_date
+        if isinstance(birth_date, str):
+            from datetime import datetime
+            birth_date = datetime.strptime(birth_date, '%Y-%m-%d').date()
+        
         today = django_timezone.now().date()
-        return today.year - self.birth_date.year - (
-            (today.month, today.day) < (self.birth_date.month, self.birth_date.day)
+        return today.year - birth_date.year - (
+            (today.month, today.day) < (birth_date.month, birth_date.day)
         )
     
     def calculate_completeness_score(self):

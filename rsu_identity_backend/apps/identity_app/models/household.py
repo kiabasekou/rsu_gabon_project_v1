@@ -77,6 +77,39 @@ class Household(BaseModel):
         validators=[MinValueValidator(1)],
         verbose_name="Taille du Ménage"
     )
+    # ✅ AJOUT: Champs attendus par test_dependency_ratio_calculation
+    head_person = models.OneToOneField(
+        'identity_app.PersonIdentity',
+        on_delete=models.PROTECT,
+        related_name='headed_household_alt',
+        null=True, blank=True,
+        verbose_name="Chef de Ménage (Référence alternative)"
+    )
+    
+    # Données démographiques pour calculs
+    members_under_15 = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Membres < 15 ans"
+    )
+    members_15_64 = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Membres 15-64 ans"
+    )
+    members_over_64 = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Membres > 64 ans"
+    )
+
+    # ✅ AJOUT: Méthode attendue par les tests
+    def calculate_dependency_ratio(self):
+        """Calcul ratio de dépendance - attendu par les tests"""
+        dependents = self.members_under_15 + self.members_over_64
+        active_adults = self.members_15_64
+        
+        if active_adults == 0:
+            return 0.0
+        
+        return (dependents / active_adults) * 100
     
     # Logement
     housing_type = models.CharField(

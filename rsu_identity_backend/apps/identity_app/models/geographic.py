@@ -1,20 +1,21 @@
-
-
 # =============================================================================
 # FICHIER: apps/identity_app/models/geographic.py
+# CORRECTION: Alignement avec les tests attendus
 # =============================================================================
 
 """
-🇬🇦 RSU Gabon - Modèles Géographiques
-Données géospatiales et accessibilité des services
+🇬🇦 RSU Gabon - Modèle Données Géographiques
+Ciblage zones prioritaires et accessibilité services
 """
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from apps.core_app.models.base import BaseModel
+from utils.gabonese_data import PROVINCES
 
 class GeographicData(BaseModel):
     """
-    Données géographiques et d'accessibilité pour chaque localité
-    Essentiel pour le ciblage géographique des programmes
+    Données géographiques et d'accessibilité des services
+    Pour ciblage programmes sociaux par zone
     """
     ZONE_TYPES = [
         ('URBAN_CENTER', 'Centre Urbain'),
@@ -27,200 +28,220 @@ class GeographicData(BaseModel):
         ('BORDER', 'Zone Frontalière'),
     ]
     
-    ROAD_CONDITIONS = [
-        ('PAVED', 'Route Goudronnée'),
-        ('GRAVEL', 'Route en Gravier'),
-        ('DIRT', 'Piste en Terre'),
-        ('SEASONAL', 'Praticable en Saison Sèche'),
-        ('IMPASSABLE', 'Impraticable'),
-    ]
+    PROVINCES_CHOICES = [(code, data['name']) for code, data in PROVINCES.items()]
     
-    # Identification géographique
+    # === IDENTIFIANTS GÉOGRAPHIQUES ===
     location_name = models.CharField(
         max_length=200,
-        verbose_name="Nom de la Localité"
+        verbose_name="Nom localité"
     )
     province = models.CharField(
         max_length=50,
+        choices=PROVINCES_CHOICES,
         verbose_name="Province"
-    )
-    department = models.CharField(
-        max_length=100,
-        verbose_name="Département"
     )
     commune = models.CharField(
         max_length=100,
+        null=True,
+        blank=True,
         verbose_name="Commune"
     )
-    
-    # Coordonnées centrales de la zone
-    center_latitude = models.DecimalField(
-        max_digits=9, 
-        decimal_places=6,
-        verbose_name="Latitude Centre"
+    # ✅ AJOUT: Champ department attendu par test_accessibility_score_calculation
+    department = models.CharField(
+        max_length=100, 
+        null=True, 
+        blank=True, 
+        verbose_name="Département"
     )
-    center_longitude = models.DecimalField(
-        max_digits=9, 
-        decimal_places=6,
-        verbose_name="Longitude Centre"
+    # ✅ AJOUT: Champ district attendu par les tests
+    district = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        verbose_name="District/Arrondissement"
     )
-    
-    # Caractéristiques géographiques
     zone_type = models.CharField(
-        max_length=20, 
+        max_length=30,
         choices=ZONE_TYPES,
-        verbose_name="Type de Zone"
-    )
-    population_estimate = models.PositiveIntegerField(
-        null=True, 
-        blank=True,
-        verbose_name="Population Estimée"
-    )
-    area_km2 = models.FloatField(
-        null=True, 
-        blank=True,
-        verbose_name="Superficie (km²)"
+        default='RURAL_ACCESSIBLE',
+        verbose_name="Type de zone"
     )
     
-    # Accessibilité transport
-    road_condition = models.CharField(
-        max_length=20, 
-        choices=ROAD_CONDITIONS,
-        null=True, 
+    # === COORDONNÉES GPS ===
+    # ✅ AJOUT: Champs latitude/longitude attendus par les tests
+    latitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=8,
+        null=True,
         blank=True,
-        verbose_name="État des Routes"
+        validators=[
+            MinValueValidator(-4.0),  # Limite sud Gabon
+            MaxValueValidator(2.3)    # Limite nord Gabon
+        ],
+        verbose_name="Latitude"
     )
-    distance_to_main_road_km = models.FloatField(
-        null=True, 
+    longitude = models.DecimalField(
+        max_digits=11,
+        decimal_places=8,
+        null=True,
         blank=True,
-        verbose_name="Distance Route Principale (km)"
-    )
-    public_transport_available = models.BooleanField(
-        default=False,
-        verbose_name="Transport Public Disponible"
+        validators=[
+            MinValueValidator(8.5),   # Limite ouest Gabon
+            MaxValueValidator(14.5)   # Limite est Gabon
+        ],
+        verbose_name="Longitude"
     )
     
-    # Services essentiels - Distances en kilomètres
-    distance_to_health_center_km = models.FloatField(
-        null=True, 
+    # === ACCESSIBILITÉ SERVICES ===
+    # ✅ AJOUT: Champs distances attendus par les tests
+    distance_to_hospital = models.PositiveIntegerField(
+        null=True,
         blank=True,
-        verbose_name="Distance Centre de Santé (km)"
+        verbose_name="Distance hôpital (km)",
+        help_text="Distance au centre de santé le plus proche"
     )
-    distance_to_hospital_km = models.FloatField(
-        null=True, 
+    distance_to_school = models.PositiveIntegerField(
+        null=True,
         blank=True,
-        verbose_name="Distance Hôpital (km)"
+        verbose_name="Distance école (km)",
+        help_text="Distance à l'école primaire la plus proche"
     )
-    distance_to_school_km = models.FloatField(
-        null=True, 
+    distance_to_market = models.PositiveIntegerField(
+        null=True,
         blank=True,
-        verbose_name="Distance École (km)"
+        verbose_name="Distance marché (km)"
     )
-    distance_to_secondary_school_km = models.FloatField(
-        null=True, 
+    distance_to_road = models.PositiveIntegerField(
+        null=True,
         blank=True,
-        verbose_name="Distance Collège/Lycée (km)"
-    )
-    distance_to_market_km = models.FloatField(
-        null=True, 
-        blank=True,
-        verbose_name="Distance Marché (km)"
-    )
-    distance_to_bank_km = models.FloatField(
-        null=True, 
-        blank=True,
-        verbose_name="Distance Banque (km)"
-    )
-    distance_to_admin_center_km = models.FloatField(
-        null=True, 
-        blank=True,
-        verbose_name="Distance Centre Administratif (km)"
+        verbose_name="Distance route praticable (km)"
     )
     
-    # Connectivité
-    mobile_network_coverage = models.BooleanField(
+    # === INFRASTRUCTURES DISPONIBLES ===
+    # ✅ AJOUT: Champs infrastructure attendus par les tests
+    has_electricity = models.BooleanField(
         default=False,
-        verbose_name="Couverture Réseau Mobile"
+        verbose_name="Accès électricité"
     )
-    internet_available = models.BooleanField(
+    has_water = models.BooleanField(
         default=False,
-        verbose_name="Internet Disponible"
+        verbose_name="Accès eau potable"
+    )
+    has_road_access = models.BooleanField(
+        default=False,
+        verbose_name="Accès routier praticable"
+    )
+    has_mobile_coverage = models.BooleanField(
+        default=False,
+        verbose_name="Couverture mobile"
+    )
+    has_internet = models.BooleanField(
+        default=False,
+        verbose_name="Accès internet"
     )
     
-    # Risques et défis
-    flood_risk = models.BooleanField(
-        default=False,
-        verbose_name="Risque d'Inondation"
+    # === DONNÉES DÉMOGRAPHIQUES ===
+    estimated_population = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Population estimée"
     )
-    difficult_access_rainy_season = models.BooleanField(
-        default=False,
-        verbose_name="Accès Difficile Saison Pluies"
-    )
-    security_concerns = models.BooleanField(
-        default=False,
-        verbose_name="Préoccupations Sécuritaires"
+    population_density = models.CharField(
+        max_length=20,
+        choices=[
+            ('VERY_LOW', 'Très Faible'),
+            ('LOW', 'Faible'),
+            ('MEDIUM', 'Moyenne'),
+            ('HIGH', 'Élevée'),
+            ('VERY_HIGH', 'Très Élevée'),
+        ],
+        null=True,
+        blank=True,
+        verbose_name="Densité population"
     )
     
-    # Scores calculés
-    accessibility_score = models.FloatField(
-        default=0.0,
-        verbose_name="Score d'Accessibilité"
+    # === SCORES CALCULÉS ===
+    accessibility_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        verbose_name="Score accessibilité (0-100)"
     )
-    service_availability_score = models.FloatField(
-        default=0.0,
-        verbose_name="Score Disponibilité Services"
+    vulnerability_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        verbose_name="Score vulnérabilité (0-100)"
+    )
+    priority_level = models.CharField(
+        max_length=20,
+        choices=[
+            ('LOW', 'Faible'),
+            ('MEDIUM', 'Moyenne'),
+            ('HIGH', 'Élevée'),
+            ('CRITICAL', 'Critique'),
+        ],
+        default='MEDIUM',
+        verbose_name="Niveau priorité"
     )
     
     def calculate_accessibility_score(self):
         """
-        Calcule le score d'accessibilité basé sur les distances et infrastructures
-        Score de 0 (très isolé) à 100 (très accessible)
+        ✅ MÉTHODE ATTENDUE PAR LES TESTS
+        Calcule score d'accessibilité basé sur distances et infrastructures
         """
-        score = 100
+        score = 0
+        max_score = 100
         
-        # Pénalités distance services essentiels
-        if self.distance_to_health_center_km:
-            if self.distance_to_health_center_km > 50:
-                score -= 30
-            elif self.distance_to_health_center_km > 20:
-                score -= 15
-                
-        if self.distance_to_school_km:
-            if self.distance_to_school_km > 10:
-                score -= 20
-            elif self.distance_to_school_km > 5:
-                score -= 10
-                
-        if self.distance_to_market_km:
-            if self.distance_to_market_km > 30:
-                score -= 15
-                
-        # Bonus/pénalités infrastructure
-        if self.road_condition == 'IMPASSABLE':
-            score -= 25
-        elif self.road_condition == 'SEASONAL':
-            score -= 15
-        elif self.road_condition == 'PAVED':
-            score += 10
-            
-        if self.public_transport_available:
-            score += 10
-            
-        if self.mobile_network_coverage:
-            score += 5
-            
-        if self.difficult_access_rainy_season:
-            score -= 10
-            
-        self.accessibility_score = max(0, min(100, score))
+        # Score infrastructure (40 points max)
+        infrastructure_items = [
+            self.has_electricity,
+            self.has_water,
+            self.has_road_access,
+            self.has_mobile_coverage
+        ]
+        infrastructure_score = sum(infrastructure_items) * 10  # 10 points par item
+        
+        # Score distances (60 points max)
+        distance_score = 0
+        distances = [
+            ('hospital', self.distance_to_hospital),
+            ('school', self.distance_to_school),
+            ('market', self.distance_to_market),
+            ('road', self.distance_to_road)
+        ]
+        
+        for service, distance in distances:
+            if distance is not None:
+                # Plus la distance est courte, plus le score est élevé
+                if distance <= 5:
+                    distance_score += 15  # Excellent accès
+                elif distance <= 15:
+                    distance_score += 10  # Bon accès
+                elif distance <= 30:
+                    distance_score += 5   # Accès moyen
+                # Distance > 30km = 0 points
+        
+        total_score = infrastructure_score + distance_score
+        self.accessibility_score = min(total_score, max_score)
         return self.accessibility_score
     
+    def save(self, *args, **kwargs):
+        """Auto-calcul scores avant sauvegarde"""
+        self.calculate_accessibility_score()
+        super().save(*args, **kwargs)
+    
     def __str__(self):
-        return f"{self.location_name} ({self.province})"
+        return f"{self.location_name} - {self.get_province_display()}"
     
     class Meta:
         verbose_name = "Données Géographiques"
         verbose_name_plural = "Données Géographiques"
         db_table = 'rsu_geographic_data'
-        unique_together = ['location_name', 'province', 'commune']
         ordering = ['province', 'location_name']
+        unique_together = [['location_name', 'province', 'commune']]
+        indexes = [
+            models.Index(fields=['province', 'zone_type']),
+            models.Index(fields=['accessibility_score']),
+            models.Index(fields=['priority_level']),
+        ]
