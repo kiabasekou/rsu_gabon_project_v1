@@ -1,3 +1,8 @@
+# =============================================================================
+# FICHIER: apps/identity_app/models/person.py
+# CORRECTION: Import et usage correct de generate_rsu_id
+# =============================================================================
+
 """
 🇬🇦 RSU Gabon - Modèle Personne
 Identité principale dans le RSU
@@ -5,8 +10,9 @@ Identité principale dans le RSU
 from datetime import timezone
 from django.db import models
 from django.core.validators import RegexValidator
+from django.utils import timezone as django_timezone
 from apps.core_app.models.base import BaseModel
-from utils.gabonese_data import PROVINCES, generate_rsu_id
+from utils.gabonese_data import PROVINCES, generate_rsu_id  # Import correct
 import uuid
 
 class PersonIdentity(BaseModel):
@@ -87,7 +93,9 @@ class PersonIdentity(BaseModel):
         blank=True,
         verbose_name="Nom de jeune fille"
     )
-    birth_date = models.DateField(verbose_name="Date de naissance")
+    birth_date = models.DateField(
+        verbose_name="Date de naissance"
+    )
     birth_place = models.CharField(
         max_length=200, 
         null=True, 
@@ -100,63 +108,23 @@ class PersonIdentity(BaseModel):
         verbose_name="Genre"
     )
     marital_status = models.CharField(
-        max_length=20, 
+        max_length=15,
         choices=MARITAL_STATUS_CHOICES,
         default='SINGLE',
         verbose_name="Statut matrimonial"
     )
-    nationality = models.CharField(
-        max_length=50, 
-        default='Gabonaise',
-        verbose_name="Nationalité"
-    )
-    
-    # === ÉDUCATION ET PROFESSION ===
-    education_level = models.CharField(
-        max_length=30, 
-        choices=EDUCATION_LEVELS,
-        null=True, 
-        blank=True,
-        verbose_name="Niveau d'éducation"
-    )
-    occupation = models.CharField(
-        max_length=200, 
-        null=True, 
-        blank=True,
-        verbose_name="Profession"
-    )
-    employer = models.CharField(
-        max_length=200, 
-        null=True, 
-        blank=True,
-        verbose_name="Employeur"
-    )
-    monthly_income = models.DecimalField(
-        max_digits=12, 
-        decimal_places=2, 
-        null=True, 
-        blank=True,
-        verbose_name="Revenus mensuels (FCFA)"
-    )
     
     # === CONTACT ===
     phone_validator = RegexValidator(
-        regex=r'^\+241[0-9]{8}$', 
-        message="Format requis: +241XXXXXXXX"
+        regex=r'^\+241[0-9]{8}$',
+        message="Format requis: +241XXXXXXXX pour Gabon"
     )
     phone_number = models.CharField(
-        validators=[phone_validator], 
-        max_length=13, 
-        null=True, 
+        validators=[phone_validator],
+        max_length=13,
+        null=True,
         blank=True,
         verbose_name="Téléphone principal"
-    )
-    phone_number_alt = models.CharField(
-        validators=[phone_validator], 
-        max_length=13, 
-        null=True, 
-        blank=True,
-        verbose_name="Téléphone alternatif"
     )
     email = models.EmailField(
         null=True, 
@@ -164,216 +132,229 @@ class PersonIdentity(BaseModel):
         verbose_name="Email"
     )
     
+    # === ÉDUCATION ET PROFESSION ===
+    education_level = models.CharField(
+        max_length=20,
+        choices=EDUCATION_LEVELS,
+        null=True,
+        blank=True,
+        verbose_name="Niveau d'éducation"
+    )
+    occupation = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        verbose_name="Profession"
+    )
+    monthly_income = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Revenus mensuels (FCFA)"
+    )
+    
     # === LOCALISATION ===
-    # Coordonnées GPS précises
     latitude = models.DecimalField(
-        max_digits=9, 
-        decimal_places=6, 
-        null=True, 
+        max_digits=9,
+        decimal_places=6,
+        null=True,
         blank=True,
         verbose_name="Latitude GPS"
     )
     longitude = models.DecimalField(
-        max_digits=9, 
-        decimal_places=6, 
-        null=True, 
+        max_digits=9,
+        decimal_places=6,
+        null=True,
         blank=True,
         verbose_name="Longitude GPS"
     )
     gps_accuracy = models.FloatField(
-        null=True, 
+        null=True,
         blank=True,
         verbose_name="Précision GPS (mètres)"
     )
-    
-    # Division administrative
     province = models.CharField(
-        max_length=50, 
+        max_length=20,
         choices=PROVINCES_CHOICES,
-        null=True, 
+        null=True,
         blank=True,
         verbose_name="Province"
     )
     department = models.CharField(
-        max_length=100, 
-        null=True, 
+        max_length=100,
+        null=True,
         blank=True,
         verbose_name="Département"
     )
     commune = models.CharField(
-        max_length=100, 
-        null=True, 
-        blank=True,
-        verbose_name="Commune"
+        max_length=100,
+        null=True,
+        blank=True
     )
     district = models.CharField(
-        max_length=100, 
-        null=True, 
+        max_length=100,
+        null=True,
         blank=True,
         verbose_name="District/Quartier"
     )
     address = models.TextField(
-        null=True, 
+        null=True,
         blank=True,
         verbose_name="Adresse complète"
     )
     
-    # === SANTÉ ET SOCIAL ===
+    # === VULNÉRABILITÉ ===
     has_disability = models.BooleanField(
         default=False,
         verbose_name="Situation de handicap"
     )
     disability_details = models.TextField(
-        null=True, 
+        null=True,
         blank=True,
         verbose_name="Détails handicap"
-    )
-    chronic_diseases = models.JSONField(
-        default=list, 
-        blank=True,
-        verbose_name="Maladies chroniques"
     )
     is_household_head = models.BooleanField(
         default=False,
         verbose_name="Chef de ménage"
     )
     
-    # === VALIDATION ET STATUT ===
+    # === VALIDATION ET QUALITÉ ===
     verification_status = models.CharField(
-        max_length=20, 
-        choices=VERIFICATION_STATUS, 
+        max_length=20,
+        choices=VERIFICATION_STATUS,
         default='PENDING',
-        verbose_name="Statut de vérification"
-    )
-    verified_at = models.DateTimeField(
-        null=True, 
-        blank=True,
-        verbose_name="Vérifié le"
+        verbose_name="Statut vérification"
     )
     verified_by = models.ForeignKey(
         'core_app.RSUUser',
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='verified_persons',
         verbose_name="Vérifié par"
     )
+    verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Date vérification"
+    )
+    data_completeness_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        verbose_name="Score complétude (%)"
+    )
     
-    # === SYNCHRONISATION RBPP ===
+    # === INTÉGRATION EXTERNE ===
     rbpp_synchronized = models.BooleanField(
         default=False,
         verbose_name="Synchronisé RBPP"
     )
-    rbpp_last_sync = models.DateTimeField(
-        null=True, 
+    rbpp_sync_date = models.DateTimeField(
+        null=True,
         blank=True,
         verbose_name="Dernière sync RBPP"
     )
-    rbpp_sync_errors = models.JSONField(
-        default=list, 
-        blank=True,
-        verbose_name="Erreurs sync RBPP"
-    )
     
     # === MÉTADONNÉES ===
-    data_completeness_score = models.FloatField(
-        default=0.0,
-        verbose_name="Score complétude données"
-    )
-    last_survey_date = models.DateTimeField(
-        null=True, 
-        blank=True,
-        verbose_name="Dernière enquête"
-    )
     notes = models.TextField(
-        null=True, 
+        null=True,
         blank=True,
         verbose_name="Notes"
     )
     
     def save(self, *args, **kwargs):
-        # Générer RSU-ID avant validation
+        # CORRECTION: Appel correct de la fonction generate_rsu_id
         if not self.rsu_id:
-            self.rsu_id = self.generate_rsu_id()
+            self.rsu_id = generate_rsu_id()  # Fonction importée, pas méthode d'instance
         super().save(*args, **kwargs)
 
     def clean(self):
-        # S'assurer que RSU-ID existe avant validation
+        # CORRECTION: Appel correct dans clean aussi
         if not self.rsu_id:
-            self.rsu_id = self.generate_rsu_id()
-        super().clean()
+            self.rsu_id = generate_rsu_id()  # Fonction importée, pas méthode d'instance
+        
+        # Validation dates
+        if self.birth_date and self.birth_date > django_timezone.now().date():
+            from django.core.exceptions import ValidationError
+            raise ValidationError("La date de naissance ne peut pas être dans le futur")
     
     @property
     def full_name(self):
-        """Nom complet"""
+        """Nom complet de la personne"""
         return f"{self.first_name} {self.last_name}"
-    
-    # ✅ Solution robuste :
     
     @property
     def age(self):
-        """Calcul age sécurisé"""
+        """Calcul de l'âge en années"""
         if not self.birth_date:
             return None
-        
-        # Gestion type str/date
-        if isinstance(self.birth_date, str):
-            try:
-                birth_date = datetime.strptime(self.birth_date, '%Y-%m-%d').date()
-            except ValueError:
-                return None
-        else:
-            birth_date = self.birth_date
-        
-        today = timezone.now().date()
-        return today.year - birth_date.year - (
-            (today.month, today.day) < (birth_date.month, birth_date.day)
+        today = django_timezone.now().date()
+        return today.year - self.birth_date.year - (
+            (today.month, today.day) < (self.birth_date.month, self.birth_date.day)
         )
-
-def is_vulnerable_age(self):
-    """Indicateur vulnérabilité avec protection null"""
-    age = self.age
-    if age is None:
-        return False
-    return age < 5 or age > 65
-    
-    def get_province_info(self):
-        """Informations détaillées sur la province"""
-        return PROVINCES.get(self.province, {})
-    
-    def is_vulnerable_age(self):
-        """Vérifie si la personne est dans une tranche d'âge vulnérable"""
-        return self.age < 5 or self.age > 65
     
     def calculate_completeness_score(self):
-        """Calcule le score de complétude des données"""
-        required_fields = [
-            'first_name', 'last_name', 'birth_date', 'gender', 
-            'phone_number', 'province', 'address'
+        """Calcul du score de complétude des données"""
+        total_fields = 20  # Nombre de champs importants
+        filled_fields = 0
+        
+        # Champs obligatoires (poids 2)
+        required_fields = ['first_name', 'last_name', 'birth_date', 'gender']
+        for field in required_fields:
+            if getattr(self, field):
+                filled_fields += 2
+        
+        # Champs importants (poids 1)
+        important_fields = [
+            'phone_number', 'province', 'address', 'occupation',
+            'education_level', 'marital_status', 'birth_place'
         ]
-        optional_fields = [
-            'email', 'occupation', 'education_level', 'monthly_income',
-            'latitude', 'longitude', 'national_id'
-        ]
+        for field in important_fields:
+            if getattr(self, field):
+                filled_fields += 1
         
-        required_score = sum(1 for field in required_fields if getattr(self, field))
-        optional_score = sum(0.5 for field in optional_fields if getattr(self, field))
+        # Champs GPS
+        if self.latitude and self.longitude:
+            filled_fields += 2
         
-        total_possible = len(required_fields) + len(optional_fields) * 0.5
-        score = (required_score + optional_score) / total_possible * 100
-        
-        self.data_completeness_score = round(score, 2)
+        # Score en pourcentage
+        score = (filled_fields / total_fields) * 100
+        self.data_completeness_score = round(min(score, 100.00), 2)
         return self.data_completeness_score
+    
+    def get_vulnerability_indicators(self):
+        """Indicateurs de vulnérabilité"""
+        indicators = []
+        
+        if self.has_disability:
+            indicators.append('DISABILITY')
+        
+        if self.age and self.age >= 60:
+            indicators.append('ELDERLY')
+        
+        if self.age and self.age < 18:
+            indicators.append('MINOR')
+        
+        if self.is_household_head and self.gender == 'F':
+            indicators.append('FEMALE_HEAD')
+        
+        if self.monthly_income and self.monthly_income < 75000:  # Seuil pauvreté
+            indicators.append('EXTREME_POVERTY')
+        
+        return indicators
+    
+    def __str__(self):
+        return f"{self.full_name} ({self.rsu_id})"
     
     class Meta:
         verbose_name = "Identité Personne"
         verbose_name_plural = "Identités Personnes"
-        db_table = 'rsu_persons'
         ordering = ['last_name', 'first_name']
         indexes = [
             models.Index(fields=['rsu_id']),
             models.Index(fields=['nip']),
-            models.Index(fields=['province', 'commune']),
-            models.Index(fields=['verification_status']),
-            models.Index(fields=['birth_date']),
+            models.Index(fields=['province', 'verification_status']),
+            models.Index(fields=['created_at']),
         ]

@@ -1,6 +1,6 @@
-
 # =============================================================================
 # FICHIER: apps/identity_app/admin.py
+# CORRECTION MINIMALE: Seulement les champs existants
 # =============================================================================
 
 """
@@ -9,8 +9,6 @@ Interface d'administration pour les identités et ménages
 """
 from django.contrib import admin
 from django.utils.html import format_html
-from django.urls import reverse
-from django.utils.safestring import mark_safe
 from .models import PersonIdentity, Household, HouseholdMember, GeographicData, RBPPSync
 
 @admin.register(PersonIdentity)
@@ -31,7 +29,7 @@ class PersonIdentityAdmin(admin.ModelAdmin):
     ]
     readonly_fields = [
         'rsu_id', 'created_at', 'updated_at', 'data_completeness_score',
-        'rbpp_last_sync', 'age_display'
+        'rbpp_sync_date', 'age_display'
     ]
     
     fieldsets = (
@@ -42,18 +40,18 @@ class PersonIdentityAdmin(admin.ModelAdmin):
             'fields': (
                 ('first_name', 'last_name', 'maiden_name'),
                 ('birth_date', 'birth_place'),
-                ('gender', 'marital_status', 'nationality'),
+                ('gender', 'marital_status'),
             ),
         }),
         ('Éducation & Profession', {
             'fields': (
                 ('education_level', 'occupation'),
-                ('employer', 'monthly_income'),
+                'monthly_income',
             ),
         }),
         ('Contact', {
             'fields': (
-                ('phone_number', 'phone_number_alt'),
+                'phone_number',
                 'email',
             ),
         }),
@@ -68,7 +66,7 @@ class PersonIdentityAdmin(admin.ModelAdmin):
         ('Santé & Social', {
             'fields': (
                 'has_disability', 'disability_details',
-                'chronic_diseases', 'is_household_head',
+                'is_household_head',
             ),
             'classes': ('collapse',),
         }),
@@ -79,13 +77,13 @@ class PersonIdentityAdmin(admin.ModelAdmin):
         }),
         ('RBPP', {
             'fields': (
-                'rbpp_synchronized', 'rbpp_last_sync', 'rbpp_sync_errors',
+                'rbpp_synchronized', 'rbpp_sync_date',
             ),
             'classes': ('collapse',),
         }),
         ('Métadonnées', {
             'fields': (
-                'data_completeness_score', 'last_survey_date', 'notes',
+                'data_completeness_score', 'notes',
                 'created_at', 'updated_at',
             ),
             'classes': ('collapse',),
@@ -93,7 +91,9 @@ class PersonIdentityAdmin(admin.ModelAdmin):
     )
     
     def age_display(self, obj):
-        return f"{obj.age} ans"
+        if obj.age:
+            return f"{obj.age} ans"
+        return "Non calculé"
     age_display.short_description = 'Âge'
     
     def rbpp_sync_status(self, obj):
@@ -117,142 +117,77 @@ class PersonIdentityAdmin(admin.ModelAdmin):
 
 @admin.register(Household)
 class HouseholdAdmin(admin.ModelAdmin):
-    """Administration des ménages"""
+    """Administration des ménages - Version minimale"""
     
     list_display = [
-        'household_id', 'head_of_household', 'household_type', 
-        'household_size', 'get_members_count', 'province', 'created_at'
+        'household_id', 'household_size', 'province', 'created_at'
     ]
-    list_filter = [
-        'household_type', 'housing_type', 'water_access', 
-        'electricity_access', 'province'
-    ]
-    search_fields = [
-        'household_id', 'head_of_household__first_name', 
-        'head_of_household__last_name'
-    ]
+    list_filter = ['province']
+    search_fields = ['household_id']
     readonly_fields = ['household_id', 'created_at', 'updated_at']
     
+    # Fieldsets minimaux avec seulement les champs existants
     fieldsets = (
         ('Identification', {
-            'fields': ('household_id', 'head_of_household'),
+            'fields': ('household_id',),
         }),
-        ('Caractéristiques', {
-            'fields': (
-                ('household_type', 'household_size'),
-                ('housing_type', 'number_of_rooms'),
-            ),
-        }),
-        ('Services de Base', {
-            'fields': (
-                ('water_access', 'electricity_access'),
-                'has_toilet',
-            ),
-        }),
-        ('Économie', {
-            'fields': (
-                'total_monthly_income', 'has_bank_account', 'assets',
-            ),
-        }),
-        ('Agriculture', {
-            'fields': (
-                'has_agricultural_land', 'agricultural_land_size', 'livestock',
-            ),
-            'classes': ('collapse',),
-        }),
-        ('Vulnérabilités', {
-            'fields': (
-                'has_disabled_members', 'has_elderly_members',
-                'has_pregnant_women', 'has_children_under_5',
-            ),
+        ('Localisation', {
+            'fields': ('province', 'latitude', 'longitude'),
         }),
         ('Métadonnées', {
-            'fields': (
-                'last_visit_date', 'vulnerability_score',
-                'created_at', 'updated_at',
-            ),
+            'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',),
         }),
     )
+
+
+@admin.register(HouseholdMember)
+class HouseholdMemberAdmin(admin.ModelAdmin):
+    """Administration des membres de ménage - Version minimale"""
     
-    def get_members_count(self, obj):
-        return obj.get_members_count()
-    get_members_count.short_description = 'Membres Réels'
-
-
-class HouseholdMemberInline(admin.TabularInline):
-    """Inline pour les membres du ménage"""
-    model = HouseholdMember
-    extra = 1
-    fields = [
-        'person', 'relationship_to_head', 'is_current_member',
-        'contributes_to_income', 'monthly_contribution'
+    list_display = [
+        'person', 'household', 'relationship_to_head', 'created_at'
     ]
-
-
-# Ajouter l'inline au HouseholdAdmin
-HouseholdAdmin.inlines = [HouseholdMemberInline]
+    list_filter = ['relationship_to_head']
+    search_fields = [
+        'person__rsu_id', 'person__first_name', 'person__last_name',
+        'household__household_id'
+    ]
+    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(GeographicData)
 class GeographicDataAdmin(admin.ModelAdmin):
-    """Administration des données géographiques"""
+    """Administration des données géographiques - Version minimale"""
     
     list_display = [
-        'location_name', 'province', 'zone_type', 'population_estimate',
-        'accessibility_score', 'service_availability_score'
+        'location_name', 'province', 'zone_type', 'accessibility_score'
     ]
-    list_filter = [
-        'province', 'zone_type', 'road_condition', 
-        'mobile_network_coverage', 'internet_available'
-    ]
-    search_fields = ['location_name', 'province', 'department', 'commune']
+    list_filter = ['province', 'zone_type']
+    search_fields = ['location_name', 'province']
+    readonly_fields = ['created_at', 'updated_at', 'accessibility_score']
     
     fieldsets = (
-        ('Identification', {
+        ('Localisation', {
             'fields': (
                 ('location_name', 'province'),
-                ('department', 'commune'),
+                ('center_latitude', 'center_longitude'),
+                'zone_type',
             ),
-        }),
-        ('Coordonnées', {
-            'fields': ('center_latitude', 'center_longitude'),
-        }),
-        ('Caractéristiques', {
-            'fields': (
-                ('zone_type', 'population_estimate', 'area_km2'),
-                ('road_condition', 'distance_to_main_road_km'),
-                'public_transport_available',
-            ),
-        }),
-        ('Distances Services (km)', {
-            'fields': (
-                ('distance_to_health_center_km', 'distance_to_hospital_km'),
-                ('distance_to_school_km', 'distance_to_secondary_school_km'),
-                ('distance_to_market_km', 'distance_to_bank_km'),
-                'distance_to_admin_center_km',
-            ),
-        }),
-        ('Connectivité', {
-            'fields': (
-                'mobile_network_coverage', 'internet_available',
-            ),
-        }),
-        ('Risques', {
-            'fields': (
-                'flood_risk', 'difficult_access_rainy_season', 
-                'security_concerns',
-            ),
-            'classes': ('collapse',),
         }),
         ('Scores Calculés', {
-            'fields': ('accessibility_score', 'service_availability_score'),
+            'fields': ('accessibility_score',),
+            'classes': ('collapse',),
+        }),
+        ('Métadonnées', {
+            'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',),
         }),
     )
     
     def save_model(self, request, obj, form, change):
-        obj.calculate_accessibility_score()
+        if hasattr(obj, 'calculate_accessibility_score'):
+            obj.calculate_accessibility_score()
         super().save_model(request, obj, form, change)
 
 
@@ -262,7 +197,7 @@ class RBPPSyncAdmin(admin.ModelAdmin):
     
     list_display = [
         'created_at', 'person', 'sync_type', 'sync_status',
-        'nip_requested', 'retry_count', 'duration_display'
+        'nip_requested', 'retry_count'
     ]
     list_filter = [
         'sync_type', 'sync_status', 'created_at'
@@ -275,12 +210,6 @@ class RBPPSyncAdmin(admin.ModelAdmin):
         'created_at', 'updated_at', 'started_at', 'completed_at',
         'duration_seconds', 'rbpp_request_id'
     ]
-    
-    def duration_display(self, obj):
-        if obj.duration_seconds:
-            return f"{obj.duration_seconds}s"
-        return '-'
-    duration_display.short_description = 'Durée'
     
     def has_add_permission(self, request):
         return False  # Syncs créées automatiquement
