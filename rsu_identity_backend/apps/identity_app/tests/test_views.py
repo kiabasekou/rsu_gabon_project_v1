@@ -58,7 +58,11 @@ class PersonIdentityViewSetTests(APITestCase):
     def test_list_persons_requires_auth(self):
         """Test liste nécessite authentification"""
         url = reverse('identity_app:persons-list')
-        response = self.client.get(url)
+        response = self.client.post(
+            url, 
+            data, 
+            content_type='application/json'
+        )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
     
     def test_list_persons_with_auth(self):
@@ -173,6 +177,11 @@ class HouseholdViewSetTests(APITestCase):
             'electricity_access': 'GRID'
         }
         
-        response = self.client.post(url, data)
+        # ✅ Correct
+        response = self.client.post(
+            url, 
+            data, 
+            content_type='application/json'
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Household.objects.count(), 1)

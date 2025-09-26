@@ -1,3 +1,7 @@
+import uuid
+import random
+from django.conf import settings
+
 """
 🇬🇦 RSU Gabon - Données de Référence Gabonaises
 Standards Top 1% - Contextualisation Locale
@@ -95,10 +99,30 @@ def validate_gabon_phone(phone_number: str) -> bool:
     """Valide un numéro de téléphone gabonais"""
     return bool(GABON_PHONE_REGEX.match(phone_number))
 
-def generate_rsu_id() -> str:
-    """Génère un RSU ID unique"""
-    import uuid
-    return f"RSU-GA-{str(uuid.uuid4())[:8].upper()}"
+def generate_rsu_id(self):
+    """
+    Génère un RSU-ID unique au format: RSU-GA-XXXXXXXX
+    RSU = Registre Social Unifié
+    GA = Gabon
+    XXXXXXXX = 8 caractères alphanumériques
+    """
+    prefix = getattr(settings, 'RSU_ID_PREFIX', 'RSU-GA-')
+    
+    # Générer 8 caractères alphanumériques
+    chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    unique_part = ''.join(random.choices(chars, k=8))
+    
+    rsu_id = f"{prefix}{unique_part}"
+    
+    # Vérifier unicité (éviter collisions)
+    while PersonIdentity.objects.filter(rsu_id=rsu_id).exists():
+        unique_part = ''.join(random.choices(chars, k=8))
+        rsu_id = f"{prefix}{unique_part}"
+    
+    return rsu_id
+
+
+
 
 def get_province_info(province_code: str) -> dict:
     """Retourne les informations d'une province"""

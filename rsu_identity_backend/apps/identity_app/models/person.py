@@ -2,6 +2,7 @@
 🇬🇦 RSU Gabon - Modèle Personne
 Identité principale dans le RSU
 """
+from datetime import timezone
 from django.db import models
 from django.core.validators import RegexValidator
 from apps.core_app.models.base import BaseModel
@@ -291,31 +292,54 @@ class PersonIdentity(BaseModel):
     )
     
     def save(self, *args, **kwargs):
-        """Génération automatique du RSU ID"""
+        # Générer RSU-ID avant validation
         if not self.rsu_id:
-            self.rsu_id = generate_rsu_id()
+            self.rsu_id = self.generate_rsu_id()
         super().save(*args, **kwargs)
-    
-    def __str__(self):
-        return f"{self.first_name} {self.last_name} ({self.rsu_id})"
+
+    def clean(self):
+        # S'assurer que RSU-ID existe avant validation
+        if not self.rsu_id:
+            self.rsu_id = self.generate_rsu_id()
+        super().clean()
     
     @property
     def full_name(self):
         """Nom complet"""
         return f"{self.first_name} {self.last_name}"
     
+    # ✅ Solution robuste :
+    
     @property
     def age(self):
-        """Calcul de l'âge"""
-        from datetime import date
-        today = date.today()
-        return today.year - self.birth_date.year - (
-            (today.month, today.day) < (self.birth_date.month, self.birth_date.day)
+        """Calcul age sécurisé"""
+        if not self.birth_date:
+            return None
+        
+        # Gestion type str/date
+        if isinstance(self.birth_date, str):
+            try:
+                birth_date = datetime.strptime(self.birth_date, '%Y-%m-%d').date()
+            except ValueError:
+                return None
+        else:
+            birth_date = self.birth_date
+        
+        today = timezone.now().date()
+        return today.year - birth_date.year - (
+            (today.month, today.day) < (birth_date.month, birth_date.day)
         )
+
+def is_vulnerable_age(self):
+    """Indicateur vulnérabilité avec protection null"""
+    age = self.age
+    if age is None:
+        return False
+    return age < 5 or age > 65
     
     def get_province_info(self):
         """Informations détaillées sur la province"""
-        return GABON_PROVINCES.get(self.province, {})
+        return PROVINCES.get(self.province, {})
     
     def is_vulnerable_age(self):
         """Vérifie si la personne est dans une tranche d'âge vulnérable"""

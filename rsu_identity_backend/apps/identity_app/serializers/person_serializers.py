@@ -20,7 +20,7 @@ class PersonIdentitySerializer(BaseModelSerializer):
     Vue complète avec calculs automatiques
     """
     age = serializers.IntegerField(source='age', read_only=True)
-    full_name = serializers.CharField(source='full_name', read_only=True)
+    full_name = serializers.CharField(read_only=True)  # Source supprimé
     province_info = serializers.SerializerMethodField()
     vulnerability_status = serializers.SerializerMethodField()
     data_completeness_percentage = serializers.DecimalField(
