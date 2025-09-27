@@ -174,7 +174,17 @@ class PersonIdentity(BaseModel):
         default='SINGLE',
         verbose_name="Statut matrimonial"
     )
-    
+    nationality = models.CharField(
+    max_length=50,
+    default='GABONAISE',
+    choices=[
+        ('GABONAISE', 'Gabonaise'),
+        ('AUTRE_CEMAC', 'Autre CEMAC'),
+        ('AUTRE_AFRIQUE', 'Autre Afrique'),
+        ('AUTRE', 'Autre'),
+    ],
+    verbose_name="Nationalité"
+)
     # === CONTACT ===
     phone_validator = RegexValidator(
         regex=r'^\+241[0-9]{8}$',
