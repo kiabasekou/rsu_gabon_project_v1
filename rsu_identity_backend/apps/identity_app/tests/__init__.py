@@ -9,3 +9,9 @@
 🇬🇦 RSU Gabon - Identity Tests
 Suite de tests pour l'app Identity
 """
+
+# Ce fichier DOIT exister pour découverte tests
+
+"""
+Tests pour Identity App - Registre Social Unifié Gabon
+"""

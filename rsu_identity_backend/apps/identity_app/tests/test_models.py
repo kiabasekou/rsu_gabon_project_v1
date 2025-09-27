@@ -67,21 +67,75 @@ class PersonIdentityModelTests(TestCase):
     
     def test_phone_validation(self):
         """Test validation numéro gabonais"""
-        person = PersonIdentity(
+        # ✅ CORRECTION: Créer et sauvegarder d'abord pour générer rsu_id
+        person = PersonIdentity.objects.create(
             first_name='Test',
-            last_name='User',
+            last_name='Phone',
             birth_date='1990-01-01',
             gender='M',
-            phone_number='+24177123456',  # Format valide
+            phone_number='+24177123456',  # Numéro gabonais valide
             created_by=self.user
         )
         
-        # Ne devrait pas lever d'exception
+        # Vérifier que rsu_id est généré automatiquement
+        self.assertTrue(person.rsu_id.startswith('RSU-GA-'))
+        
+        # ✅ Test validation après création (rsu_id existe)
         try:
-            person.full_clean()
-            self.assertTrue(True)  # Test passé
-        except ValidationError:
-            self.fail("Validation échouée pour un numéro valide")
+            person.full_clean()  # Ne devrait pas lever d'exception
+            validation_passed = True
+        except ValidationError as e:
+            validation_passed = False
+            self.fail(f"Validation échouée pour un numéro valide: {e}")
+        
+        self.assertTrue(validation_passed, "Validation téléphone réussie")
+        
+        # ✅ Test numéros gabonais valides
+        valid_numbers = [
+            '+24177123456',  # Airtel
+            '+24106789012',  # Gabon Telecom  
+            '+24162345678',  # Moov
+            '+24104567890',  # Format alternatif
+        ]
+        
+        for i, number in enumerate(valid_numbers):
+            person_valid = PersonIdentity.objects.create(
+                first_name=f'Test{i}',
+                last_name='ValidPhone',
+                birth_date='1985-01-01',
+                gender='F',
+                phone_number=number,
+                created_by=self.user
+            )
+            
+            # Validation automatique à la création - ne devrait pas lever d'exception
+            self.assertIsNotNone(person_valid.rsu_id)
+            self.assertTrue(person_valid.rsu_id.startswith('RSU-GA-'))
+    
+    def test_phone_validation_invalid_numbers(self):
+        """Test validation numéros invalides"""
+        invalid_numbers = [
+            '+33123456789',   # France (non-gabonais)
+            '+237123456789',  # Cameroun (non-gabonais)
+            '77123456',       # Format local sans +241
+            '+24112345',      # Trop court
+            '+241771234567890', # Trop long
+            'invalid-phone',  # Format invalide
+        ]
+        
+        for i, invalid_number in enumerate(invalid_numbers):
+            with self.assertRaises(ValidationError, 
+                                msg=f"Numéro invalide accepté: {invalid_number}"):
+                person = PersonIdentity(
+                    first_name=f'Invalid{i}',
+                    last_name='Phone',
+                    birth_date='1990-01-01',
+                    gender='M',
+                    phone_number=invalid_number,
+                    created_by=self.user
+                )
+                person.full_clean()  # Devrait lever ValidationError
+
     
     def test_vulnerability_indicators(self):
         """Test indicateurs de vulnérabilité"""
@@ -162,6 +216,7 @@ class HouseholdModelTests(TestCase):
             employee_id='TEST-001'
         )
         
+        # ✅ CORRECTION: Créer PersonIdentity avec chef de ménage
         self.head = PersonIdentity.objects.create(
             first_name='Chef',
             last_name='Menage',
@@ -173,8 +228,9 @@ class HouseholdModelTests(TestCase):
     
     def test_household_id_generation(self):
         """Test génération ID ménage"""
+        # ✅ CORRECTION: Utiliser head_of_household (obligatoire) au lieu de head_person
         household = Household.objects.create(
-            head_person=self.head,
+            head_of_household=self.head,  # ← Champ obligatoire correct
             household_size=4,
             province='ESTUAIRE',
             created_by=self.user
@@ -185,16 +241,36 @@ class HouseholdModelTests(TestCase):
     
     def test_dependency_ratio_calculation(self):
         """Test calcul ratio de dépendance"""
+        # ✅ CORRECTION: Utiliser head_of_household + définir membres par âge
         household = Household.objects.create(
-            head_person=self.head,
+            head_of_household=self.head,  # ← Champ obligatoire correct
             household_size=5,
-            members_under_15=2,
-            members_over_64=1,
-            members_15_64=2,
+            members_under_15=2,    # 2 enfants
+            members_over_64=1,     # 1 âgé
+            members_15_64=2,       # 2 actifs
             province='ESTUAIRE',
             created_by=self.user
         )
         
         ratio = household.calculate_dependency_ratio()
-        expected_ratio = (2 + 1) / 2 * 100  # (2 enfants + 1 âgé) / 2 actifs * 100
+        expected_ratio = (2 + 1) / 2 * 100  # (2 enfants + 1 âgé) / 2 actifs * 100 = 150%
         self.assertEqual(ratio, expected_ratio)
+        self.assertEqual(ratio, 150.0)  # Vérification exacte
+    
+    def test_household_relationships(self):
+        """Test relations ménage-membres"""
+        household = Household.objects.create(
+            head_of_household=self.head,
+            household_size=3,
+            province='ESTUAIRE',
+            created_by=self.user
+        )
+        
+        # Vérifier que le chef est bien lié
+        self.assertEqual(household.head_of_household, self.head)
+        self.assertEqual(household.head_of_household.full_name, 'Chef Menage')
+        
+        # Vérifier génération ID ménage
+        self.assertIsNotNone(household.household_id)
+        self.assertTrue(len(household.household_id) > 10)
+

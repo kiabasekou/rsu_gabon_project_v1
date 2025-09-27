@@ -3,11 +3,14 @@
 🇬🇦 RSU Gabon - Django Management Script
 Standards Top 1% - Configuration Windows
 """
+"""Django's command-line utility for administrative tasks."""
 import os
 import sys
 
-if __name__ == '__main__':
-    # Forcer le mode développement sur Windows
+
+def main():
+    """Run administrative tasks."""
+    # ✅ VÉRIFICATION: Variable d'environnement correcte
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rsu_identity.settings.development')
     
     try:
@@ -19,3 +22,7 @@ if __name__ == '__main__':
             "forget to activate a virtual environment?"
         ) from exc
     execute_from_command_line(sys.argv)
+
+
+if __name__ == '__main__':
+    main()

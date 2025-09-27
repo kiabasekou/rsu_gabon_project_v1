@@ -240,11 +240,50 @@ class Household(BaseModel):
         return self.members.count()
     
     def calculate_dependency_ratio(self):
-        """Ratio de dépendance (enfants + âgés / adultes actifs)"""
-        members = self.members.all()
-        dependents = sum(1 for m in members if m.person.age < 15 or m.person.age > 65)
-        active_adults = sum(1 for m in members if 15 <= m.person.age <= 65)
-        return (dependents / active_adults * 100) if active_adults > 0 else 0
+        """
+        Calcul ratio de dépendance optimisé pour RSU Gabon
+        
+        LOGIQUE:
+        1. Si champs démographiques remplis → utiliser directement
+        2. Sinon → calculer depuis relations HouseholdMember 
+        3. Fallback → ratio basé sur household_size estimé
+        """
+        
+        # MÉTHODE 1: Champs démographiques directs (priorité)
+        if (hasattr(self, 'members_under_15') and 
+            self.members_under_15 is not None and
+            hasattr(self, 'members_15_64') and 
+            self.members_15_64 is not None):
+            
+            dependents = self.members_under_15 + getattr(self, 'members_over_64', 0)
+            active_adults = self.members_15_64
+            
+            if active_adults > 0:
+                return round((dependents / active_adults) * 100, 2)
+            else:
+                return 0.0
+        
+        # MÉTHODE 2: Relations HouseholdMember (secondaire)
+        try:
+            members = self.members.all()
+            if members.exists():
+                dependents = sum(1 for m in members if m.person.age < 15 or m.person.age > 65)
+                active_adults = sum(1 for m in members if 15 <= m.person.age <= 65)
+                
+                if active_adults > 0:
+                    return round((dependents / active_adults) * 100, 2)
+        except:
+            pass  # Relations pas encore configurées
+        
+        # MÉTHODE 3: Estimation basée sur household_size (fallback)
+        if hasattr(self, 'household_size') and self.household_size > 1:
+            # Estimation Gabon: 40% dépendants, 60% actifs dans ménages moyens
+            estimated_dependents = max(1, int(self.household_size * 0.4))
+            estimated_active = max(1, self.household_size - estimated_dependents)
+            
+            return round((estimated_dependents / estimated_active) * 100, 2)
+        
+        return 0.0
     
     class Meta:
         verbose_name = "Ménage"

@@ -14,6 +14,67 @@ from django.utils import timezone as django_timezone
 from apps.core_app.models.base import BaseModel
 from utils.gabonese_data import PROVINCES, generate_rsu_id  # Import correct
 import uuid
+from django.core.exceptions import ValidationError
+import re
+
+
+def validate_gabonese_phone(phone_number):
+    """
+    Validation spécifique numéros de téléphone gabonais
+    Formats acceptés:
+    - +241 XX XXX XXX (international)
+    - 0X XXX XXXX (national)
+    
+    Opérateurs Gabon:
+    - Gabon Telecom: +241 01/02/03/04/05
+    - Airtel: +241 77/78/79  
+    - Moov: +241 62/66/67
+    """
+    if not phone_number:
+        return  # Champ optionnel
+    
+    # Nettoyer le numéro (supprimer espaces, tirets)
+    clean_number = re.sub(r'[\s\-\(\)]', '', phone_number)
+    
+    # Pattern pour numéros gabonais
+    gabonese_patterns = [
+        r'^\+241[0-9]{8}$',           # +241XXXXXXXX (international)
+        r'^00241[0-9]{8}$',           # 00241XXXXXXXX (international alternatif)
+        r'^0[1-9][0-9]{7}$',          # 0XXXXXXXX (national)
+    ]
+    
+    # Vérifier si le numéro correspond aux patterns gabonais
+    is_valid = any(re.match(pattern, clean_number) for pattern in gabonese_patterns)
+    
+    if not is_valid:
+        raise ValidationError(
+            'Numéro de téléphone invalide. '
+            'Formats acceptés: +241XXXXXXXX ou 0XXXXXXXX (Gabon uniquement)'
+        )
+    
+    # Validation opérateurs spécifiques
+    if clean_number.startswith('+241'):
+        prefix = clean_number[4:6]  # 2 chiffres après +241
+    elif clean_number.startswith('00241'):
+        prefix = clean_number[5:7]  # 2 chiffres après 00241
+    elif clean_number.startswith('0'):
+        prefix = clean_number[1:3]  # 2 chiffres après 0
+    else:
+        prefix = None
+    
+    # Préfixes valides au Gabon (2024)
+    valid_prefixes = [
+        '01', '02', '03', '04', '05',  # Gabon Telecom fixe
+        '06', '07',                    # Gabon Telecom mobile
+        '62', '66', '67',              # Moov (anciennement Azur)  
+        '77', '78', '79',              # Airtel
+    ]
+    
+    if prefix and prefix not in valid_prefixes:
+        raise ValidationError(
+            f'Préfixe {prefix} non reconnu pour un opérateur gabonais. '
+            f'Préfixes valides: {", ".join(valid_prefixes)}'
+        )
 
 class PersonIdentity(BaseModel):
     """
@@ -119,13 +180,16 @@ class PersonIdentity(BaseModel):
         regex=r'^\+241[0-9]{8}$',
         message="Format requis: +241XXXXXXXX pour Gabon"
     )
+        # Dans le modèle PersonIdentity, ajouter:
     phone_number = models.CharField(
-        validators=[phone_validator],
-        max_length=13,
-        null=True,
+        max_length=20,
         blank=True,
-        verbose_name="Téléphone principal"
+        null=True,
+        validators=[validate_gabonese_phone],  # ← Ajout validateur
+        verbose_name="Numéro de Téléphone",
+        help_text="Format: +241XXXXXXXX ou 0XXXXXXXX"
     )
+
     email = models.EmailField(
         null=True, 
         blank=True,
@@ -273,7 +337,6 @@ class PersonIdentity(BaseModel):
         
         # Validation dates
         if self.birth_date and self.birth_date > django_timezone.now().date():
-            from django.core.exceptions import ValidationError
             raise ValidationError("La date de naissance ne peut pas être dans le futur")
         
         super().clean()
@@ -371,3 +434,4 @@ class PersonIdentity(BaseModel):
             models.Index(fields=['province', 'verification_status']),
             models.Index(fields=['created_at']),
         ]
+    
