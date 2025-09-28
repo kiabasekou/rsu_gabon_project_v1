@@ -45,6 +45,7 @@ LOCAL_APPS = [
     'apps.family_graph',
     'apps.deduplication', 
     'apps.analytics',
+    'apps.services_app',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

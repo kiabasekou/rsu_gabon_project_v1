@@ -82,6 +82,10 @@ urlpatterns = [
     
     # Health Checks & Monitoring
     path('health/', include('health_check.urls')),
+
+    #SERVICES APP
+    path('api/v1/services/', include('apps.services_app.urls')),
+
 ]
 
 # Servir les fichiers statiques en développement
