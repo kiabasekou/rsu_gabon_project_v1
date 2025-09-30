@@ -10,8 +10,10 @@ from .models import (
     SocialProgram, 
     SocialProgramEligibility, 
     VulnerabilityAssessment,
-    ProgramBudgetChange
+    ProgramBudgetChange,
+    GeographicInterventionCost  # ✅ Ajouter
 )
+from .models import GeographicInterventionCost
 
 @admin.register(SocialProgram)
 class SocialProgramAdmin(admin.ModelAdmin):
@@ -140,6 +142,50 @@ class ProgramBudgetChangeAdmin(admin.ModelAdmin):
         })
     )
 
+
+@admin.register(GeographicInterventionCost)
+class GeographicInterventionCostAdmin(admin.ModelAdmin):
+    """
+    Interface admin pour configuration coûts intervention
+    """
+    list_display = [
+        'zone_key',
+        'cost_per_person_formatted',
+        'last_updated_by',
+        'last_updated_at'
+    ]
+    list_filter = ['zone_key', 'last_updated_at']
+    search_fields = ['zone_key', 'description']
+    readonly_fields = ['last_updated_by', 'last_updated_at', 'created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Configuration Zone', {
+            'fields': ('zone_key', 'cost_per_person')
+        }),
+        ('Détails', {
+            'fields': ('description',)
+        }),
+        ('Audit Trail', {
+            'fields': ('last_updated_by', 'last_updated_at', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def cost_per_person_formatted(self, obj):
+        """Affiche coût formaté avec séparateurs"""
+        return f"{obj.cost_per_person:,.0f} FCFA".replace(',', ' ')
+    cost_per_person_formatted.short_description = "Coût par personne"
+    
+    def save_model(self, request, obj, form, change):
+        """Enregistrer utilisateur qui modifie"""
+        obj.last_updated_by = request.user
+        super().save_model(request, obj, form, change)
+    
+    def has_delete_permission(self, request, obj=None):
+        """Empêcher suppression (seulement modification)"""
+        return False  # Les zones ne peuvent pas être supprimées
+    
+    
 # Configuration globale de l'admin
 admin.site.site_header = "🇬🇦 Administration RSU Gabon"
 admin.site.site_title = "RSU Admin"

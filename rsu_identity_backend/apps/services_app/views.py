@@ -10,6 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import models, transaction
 from django.utils import timezone
+from .services import VulnerabilityService, EligibilityService, GeotargetingService
+
 
 # ✅ CORRECTION: Import des bons modèles et serializers
 from .models import (
@@ -348,6 +350,35 @@ class SocialProgramEligibilityViewSet(viewsets.ModelViewSet):
         return super().get_queryset().select_related(
             'person', 'created_by', 'updated_by'
         ).order_by('-assessment_date')
+    
+        
+    @action(detail=False, methods=['post'])
+    def calculate_eligibility(self, request):
+        """Calcule éligibilité personne/programme"""
+        person_id = request.data.get('person_id')
+        program_code = request.data.get('program_code')
+        
+        service = EligibilityService()
+        eligibility = service.calculate_program_eligibility(
+            person_id=person_id,
+            program_code=program_code
+        )
+        
+        serializer = self.get_serializer(eligibility)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def recommended_programs(self, request):
+        """Programmes recommandés pour une personne"""
+        person_id = request.query_params.get('person_id')
+        min_score = float(request.query_params.get('min_score', 60.0))
+        
+        service = EligibilityService()
+        recommended = service.get_recommended_programs(
+            person_id=int(person_id),
+            min_score=min_score
+        )
+        return Response(recommended)
 
 
 class VulnerabilityAssessmentViewSet(viewsets.ModelViewSet):
@@ -472,7 +503,22 @@ class VulnerabilityAssessmentViewSet(viewsets.ModelViewSet):
                 {'error': f'Erreur dashboard: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
+        
+    @action(detail=False, methods=['post'])
+    def bulk_calculate(self, request):
+        """Calcul en masse des évaluations"""
+        person_ids = request.data.get('person_ids', [])
+        service = VulnerabilityService()
+        results = service.bulk_calculate_assessments(person_ids)
+        return Response(results)
+    
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Statistiques vulnérabilité"""
+        province = request.query_params.get('province')
+        service = VulnerabilityService()
+        stats = service.get_vulnerability_statistics(province=province)
+        return Response(stats)
 
 class ProgramBudgetChangeViewSet(viewsets.ReadOnlyModelViewSet):
     """

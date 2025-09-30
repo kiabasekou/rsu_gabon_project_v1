@@ -9,6 +9,9 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from apps.core_app.models import BaseModel
 
+from django.conf import settings
+
+
 # ===================================================================
 # MODÈLE PRINCIPAL: SOCIAL PROGRAM
 # ===================================================================
@@ -385,6 +388,8 @@ class VulnerabilityAssessment(BaseModel):
         return f"{self.person.full_name} - Vulnérabilité {self.risk_level}"
 
 
+
+
 # ===================================================================
 # HISTORIQUE MODIFICATIONS BUDGÉTAIRES
 # ===================================================================
@@ -463,3 +468,61 @@ class ProgramBudgetChange(BaseModel):
         
     def __str__(self):
         return f"Changement budget {self.program.name} - {self.created_at.strftime('%d/%m/%Y')}"
+
+# ===================================================================
+# COÛTS INTERVENTION GÉOGRAPHIQUES (Configurable Admin)
+# ===================================================================
+
+class GeographicInterventionCost(BaseModel):
+    """
+    Coûts d'intervention par zone géographique
+    Configurable par les administrateurs
+    """
+    
+    ZONE_CHOICES = [
+        ('ZONE_1', 'Zone Critique'),
+        ('ZONE_2', 'Zone Priorité Élevée'),
+        ('ZONE_3', 'Zone Priorité Modérée'),
+        ('ZONE_4', 'Zone Standard'),
+    ]
+    
+    zone_key = models.CharField(
+        max_length=20,
+        unique=True,
+        choices=ZONE_CHOICES,
+        verbose_name="Zone géographique"
+    )
+    
+    cost_per_person = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        verbose_name="Coût par personne (FCFA)"
+    )
+    
+    description = models.TextField(
+        blank=True,
+        verbose_name="Description"
+    )
+    
+    last_updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,  # ✅ CORRECT
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Dernière modification par"
+    )
+    
+    last_updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Dernière modification"
+    )
+    
+    class Meta:
+        db_table = 'services_intervention_costs'
+        verbose_name = "Coût d'intervention géographique"
+        verbose_name_plural = "Coûts d'intervention géographiques"
+        ordering = ['zone_key']
+    
+    def __str__(self):
+        return f"{self.get_zone_key_display()} - {self.cost_per_person:,.0f} FCFA"

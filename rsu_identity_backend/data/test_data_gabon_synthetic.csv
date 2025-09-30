@@ -1,0 +1,6 @@
+first_name,last_name,age,gender,province,education_level,has_disability,household_size,children_count,monthly_income,primary_income_source
+Marie,NGOUA,32,F,NYANGA,PRIMARY,0,8,5,35000,UNEMPLOYED
+Jean,MBINA,45,M,ESTUAIRE,UNIVERSITY,0,4,2,450000,FORMAL_EMPLOYMENT
+Pauline,OVONO,28,F,OGOOUE_LOLO,SECONDARY,1,6,4,42000,INFORMAL
+Pierre,ELLA,55,M,HAUT_OGOOUE,VOCATIONAL,0,3,0,180000,SELF_EMPLOYED
+Antoinette,NGUEMA,38,F,OGOOUE_IVINDO,PRIMARY,0,7,5,38000,DAILY_WORKER
