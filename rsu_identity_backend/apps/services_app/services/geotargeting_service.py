@@ -101,17 +101,17 @@ class GeotargetingService(BaseService):
                         continue
                     
                     # Distribution niveaux vulnérabilité
-                    critical_count = prov_assessments.filter(
-                        vulnerability_level='CRITICAL'
-                    ).count()
+                    critical_count = prov_assessments.filter(risk_level='CRITICAL').count()
                     high_count = prov_assessments.filter(
-                        vulnerability_level='HIGH'
+                        risk_level='HIGH'
                     ).count()
                     
                     # Score moyen
+                    # Score moyen
                     avg_vuln = prov_assessments.aggregate(
-                        avg_score=Avg('global_score')
+                        avg_score=Avg('vulnerability_score')
                     )['avg_score'] or 0
+
                     
                     # Score accessibilité (si données géographiques disponibles)
                     accessibility_score = self._calculate_province_accessibility(prov)
@@ -238,7 +238,7 @@ class GeotargetingService(BaseService):
                 
                 # Comptage vulnérables
                 vulnerable_count = assessments.filter(
-                    vulnerability_level__in=['CRITICAL', 'HIGH']
+                    risk_level__in=['CRITICAL', 'HIGH']
                 ).count()
                 
                 vulnerability_rate = (vulnerable_count / total_pop * 100) if total_pop > 0 else 0
@@ -492,7 +492,7 @@ class GeotargetingService(BaseService):
                 
                 # Comptage vulnérables
                 vulnerable_count = assessments.filter(
-                    vulnerability_level__in=['CRITICAL', 'HIGH']
+                    risk_level__in=['CRITICAL', 'HIGH']
                 ).count()
                 
                 vulnerability_rate = (vulnerable_count / total_pop * 100) if total_pop > 0 else 0
@@ -1055,7 +1055,7 @@ class GeotargetingService(BaseService):
                 return 0.0
             
             vulnerable = assessments.filter(
-                vulnerability_level__in=['CRITICAL', 'HIGH']
+                risk_level__in=['CRITICAL', 'HIGH']
             ).count()
             
             return round(vulnerable / total * 100, 2)

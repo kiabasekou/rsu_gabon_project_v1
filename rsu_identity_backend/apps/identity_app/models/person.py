@@ -292,6 +292,36 @@ class PersonIdentity(BaseModel):
         default=False,
         verbose_name="Chef de ménage"
     )
+    # === VULNÉRABILITÉ (Calculée par services) ===
+    vulnerability_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Score de vulnérabilité (0-100)",
+        help_text="Calculé automatiquement par le service de vulnérabilité"
+    )
+
+    VULNERABILITY_LEVELS = [
+        ('CRITICAL', 'Critique'),
+        ('HIGH', 'Élevée'),
+        ('MODERATE', 'Modérée'),
+        ('LOW', 'Faible'),
+    ]
+
+    vulnerability_level = models.CharField(
+        max_length=20,
+        choices=VULNERABILITY_LEVELS,
+        null=True,
+        blank=True,
+        verbose_name="Niveau de vulnérabilité"
+    )
+
+    last_vulnerability_assessment = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Dernière évaluation vulnérabilité"
+    )
     
     # === VALIDATION ET QUALITÉ ===
     verification_status = models.CharField(
