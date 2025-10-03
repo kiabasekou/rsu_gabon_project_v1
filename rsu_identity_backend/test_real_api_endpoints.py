@@ -168,7 +168,8 @@ class IdentityAPITest(APITestCase):
             email='testidentity@rsu.ga',
             password='TestPass123!',
             user_type='SURVEYOR',
-            employee_id='ID-001'
+            employee_id='ID-001',
+            assigned_provinces=['ESTUAIRE', 'NYANGA']  # ✅ AJOUT CRITIQUE
         )
         
         # Authentifier
