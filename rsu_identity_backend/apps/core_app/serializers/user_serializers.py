@@ -1,6 +1,6 @@
-
 # =============================================================================
-# FICHIER: apps/core_app/serializers/user_serializers.py
+# FICHIER: apps/core_app/serializers/user_serializers.py (LIGNES 16-27)
+# CORRECTION: Retirer les paramètres source= redondants
 # =============================================================================
 
 """
@@ -13,6 +13,7 @@ from django.core.exceptions import ValidationError
 from apps.core_app.models import RSUUser
 from utils.gabonese_data import PROVINCES
 
+
 class RSUUserSerializer(serializers.ModelSerializer):
     """
     Serializer principal pour RSUUser
@@ -21,8 +22,8 @@ class RSUUserSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     user_type_display = serializers.CharField(source='get_user_type_display', read_only=True)
     provinces_display = serializers.SerializerMethodField()
-    is_surveyor = serializers.BooleanField(source='is_surveyor', read_only=True)
-    is_supervisor = serializers.BooleanField(source='is_supervisor', read_only=True)
+    is_surveyor = serializers.BooleanField(read_only=True)
+    is_supervisor = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = RSUUser

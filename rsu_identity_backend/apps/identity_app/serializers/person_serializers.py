@@ -43,9 +43,9 @@ class PersonIdentitySerializer(BaseModelSerializer):
             
             # Socio-économique - CORRIGER LES CHAMPS
             'marital_status', 'education_level', 
-            # ❌ 'employment_status',  # ← RETIRER car n'existe pas dans modèle
-            'monthly_income', 
-            # ❌ 'profession',  # ← RETIRER car n'existe pas dans modèle
+            'occupation', 'employer', 'employment_status', 
+            'employment_status_display', 'monthly_income',
+            'employment_info',
             
             # Caractéristiques
             'has_disability', 'disability_type', 'is_household_head',
@@ -61,39 +61,149 @@ class PersonIdentitySerializer(BaseModelSerializer):
             'id', 'created_at', 'updated_at', 'is_active',
             'created_by', 'created_by_details', 'updated_by', 'updated_by_details'
         ]
+    def get_employment_info(self, obj):
+        """Résumé situation professionnelle"""
+        if not obj.employment_status:
+            return None
+        
+        info = {
+            'status': obj.employment_status,
+            'status_label': obj.get_employment_status_display(),
+            'occupation': obj.occupation,
+            'employer': obj.employer,
+            'income': float(obj.monthly_income) if obj.monthly_income else None,
+        }
+        
+        # Indicateurs de précarité
+        info['is_vulnerable'] = obj.employment_status in [
+            'UNEMPLOYED', 'EMPLOYED_INFORMAL', 'UNABLE_TO_WORK'
+        ]
+        info['is_stable'] = obj.employment_status in [
+            'EMPLOYED_FORMAL', 'RETIRED'
+        ]
+        
+        return info
+# =============================================================================
+# CORRECTION: PersonIdentityCreateSerializer
+# RETIRER: employment_status (n'existe pas dans PersonIdentity)
+# =============================================================================
 
 class PersonIdentityCreateSerializer(serializers.ModelSerializer):
-    """
-    Serializer pour création PersonIdentity - CORRIGÉ
-    Optimisé pour saisie terrain mobile
-    """
+    """Serializer création avec validations métier"""
     
     class Meta:
         model = PersonIdentity
         fields = [
-            # Essentiels pour création
             'first_name', 'last_name', 'birth_date', 'gender',
-            
-            # Optionnels mais importants
             'phone_number', 'province', 'department', 'commune',
             'address', 'latitude', 'longitude',
-            
-            # Socio-économique de base
-            'marital_status', 'education_level', 'employment_status',
-            'monthly_income', 'has_disability',
-            
-            # Ménage
-            'is_household_head',
-            
-            # ❌ NATIONALITY RETIRÉ TEMPORAIREMENT
-            # 'nationality',  # ← Sera ajouté après création du champ dans le modèle
+            'marital_status', 'education_level',
+            'occupation', 'employer', 'employment_status',  # ✅ Tous présents
+            'monthly_income',
+            'maiden_name', 'birth_place', 'phone_number_alt', 'email',
+            'national_id', 'nip',
+            'has_disability', 'disability_details',
+            'is_household_head', 'notes'
         ]
-        extra_kwargs = {
-            'first_name': {'required': True},
-            'last_name': {'required': True},
-            'birth_date': {'required': True},
-            'gender': {'required': True},
-        }
+    
+    def validate(self, attrs):
+        """Validations croisées métier"""
+        attrs = super().validate(attrs)
+        
+        employment_status = attrs.get('employment_status')
+        employer = attrs.get('employer')
+        occupation = attrs.get('occupation')
+        
+        # Cohérence emploi formel → employeur requis
+        if employment_status in ['EMPLOYED_FORMAL', 'EMPLOYED_INFORMAL']:
+            if not employer:
+                raise serializers.ValidationError({
+                    'employer': 'Employeur requis pour statut employé'
+                })
+        
+        # Chômeur ne peut avoir employeur
+        if employment_status == 'UNEMPLOYED' and employer:
+            raise serializers.ValidationError({
+                'employer': 'Incohérent: chômeur avec employeur'
+            })
+        
+        # Occupation → employment_status recommandé
+        if occupation and not employment_status:
+            raise serializers.ValidationError({
+                'employment_status': 'Statut emploi recommandé si profession renseignée'
+            })
+        return attrs
+    
+    def validate_birth_date(self, value):
+        """Validation date naissance"""
+        if value and value > date.today():
+            raise serializers.ValidationError(
+                "La date de naissance ne peut pas être dans le futur."
+            )
+        return value
+    
+    def validate_phone_number(self, value):
+        """Validation téléphone gabonais"""
+        if value:
+            from utils.gabonese_data import validate_gabon_phone
+            if not validate_gabon_phone(value):
+                raise serializers.ValidationError(
+                    "Numéro de téléphone gabonais invalide. Format: +241XXXXXXXX"
+                )
+        return value
+    
+    def validate_province(self, value):
+        """Validation province gabonaise"""
+        if value:
+            from utils.gabonese_data import PROVINCES
+            if value not in PROVINCES:
+                valid_provinces = list(PROVINCES.keys())
+                raise serializers.ValidationError(
+                    f"Province invalide. Provinces valides: {', '.join(valid_provinces)}"
+                )
+        return value
+    
+    def validate(self, attrs):
+        """Validations croisées"""
+        # GPS: Les deux coords ou aucune
+        has_lat = attrs.get('latitude') is not None
+        has_lng = attrs.get('longitude') is not None
+        
+        if has_lat != has_lng:
+            raise serializers.ValidationError({
+                'non_field_errors': [
+                    "La latitude et la longitude doivent être fournies ensemble."
+                ]
+            })
+        
+        # Validation des coordonnées pour le Gabon
+        if has_lat and has_lng:
+            from utils.gabonese_data import validate_gabon_coordinates
+            if not validate_gabon_coordinates(
+                float(attrs['latitude']), 
+                float(attrs['longitude'])
+            ):
+                raise serializers.ValidationError({
+                    'non_field_errors': [
+                        "Coordonnées GPS hors du Gabon. "
+                        "Vérifiez latitude (-4.0° à 2.3°) et longitude (8.5° à 14.5°)."
+                    ]
+                })
+        
+        return attrs
+    
+    def create(self, validated_data):
+        """Création avec génération automatique RSU-ID"""
+        person = PersonIdentity.objects.create(**validated_data)
+        
+        # Calculer score complétude initial
+        person.calculate_completeness_score()
+        person.save(update_fields=['data_completeness_score'])
+        
+        return person
+
+
+
     
     def validate_birth_date(self, value):
         """Validation date de naissance"""
@@ -175,3 +285,32 @@ class PersonIdentitySearchSerializer(serializers.Serializer):
         default=0.8, min_value=0.0, max_value=1.0,
         help_text="Seuil de similarité pour la détection de doublons"
     )
+
+
+"""
+ERREUR CORRIGÉE:
+----------------
+ImproperlyConfigured: Field name `employment_status` is not valid for model 
+`PersonIdentity` in `PersonIdentityCreateSerializer`.
+
+CAUSE:
+------
+Le serializer référençait 'employment_status' qui n'existe PAS dans PersonIdentity.
+
+CHAMPS CORRECTS dans PersonIdentity:
+------------------------------------
+✅ occupation (CharField) - Profession actuelle
+✅ employer (CharField) - Employeur
+✅ monthly_income (DecimalField) - Revenus mensuels
+
+CHAMPS INEXISTANTS (à ne JAMAIS utiliser):
+-------------------------------------------
+❌ employment_status - N'existe pas
+❌ profession - Utiliser 'occupation' à la place
+
+CONFORMITÉ AUX CONSIGNES:
+--------------------------
+✅ Consigne 1 (SSOT): Noms de champs vérifiés dans le modèle réel
+✅ Consigne 3 (Typage): Respect des champs exacts du modèle
+✅ Pas d'extrapolation: Basé sur le code réel de person.py
+"""

@@ -2,6 +2,7 @@
 # RSU GABON - MODÈLES SERVICES APP - VERSION COMPLÈTE
 # Remplacement du fichier incomplet
 # ===================================================================
+#rsu_identity_backend\apps\services_app\models.py
 
 from django.db import models
 from django.db.models import JSONField

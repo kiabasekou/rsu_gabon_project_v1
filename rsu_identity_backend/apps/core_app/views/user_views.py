@@ -1,11 +1,9 @@
 
-# =============================================================================
-# FICHIER: apps/core_app/views/user_views.py
-# =============================================================================
-
 """
 🇬🇦 RSU Gabon - User ViewSets
 APIs REST pour gestion des utilisateurs RSU
+
+MODIFICATION: Import et utilisation du FilterSet custom pour corriger l'erreur JSONField
 """
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -21,7 +19,8 @@ from apps.core_app.serializers import (
     RSUUserSerializer, RSUUserCreateSerializer, 
     RSUUserUpdateSerializer, RSUUserMinimalSerializer
 )
-
+# ✅ CORRECTION: Import du FilterSet custom
+from apps.core_app.filters import RSUUserFilter
 
 from .permissions import IsAdminOrSupervisor, IsOwnerOrAdmin
 
@@ -34,11 +33,21 @@ class RSUUserViewSet(viewsets.ModelViewSet):
     - Filtrage par type, département, province
     - Actions spéciales: login, logout, change_password
     - Audit automatique des actions
+    
+    ✅ CORRECTION APPLIQUÉE:
+    - Utilisation de RSUUserFilter au lieu de filterset_fields
+    - Résout l'AssertionError sur assigned_provinces (JSONField)
     """
     queryset = RSUUser.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['user_type', 'department', 'is_active', 'assigned_provinces']
+    
+    # ❌ ANCIENNE VERSION (causait l'erreur):
+    # filterset_fields = ['user_type', 'department', 'is_active', 'assigned_provinces']
+    
+    # ✅ NOUVELLE VERSION (corrige l'erreur):
+    filterset_class = RSUUserFilter
+    
     search_fields = ['username', 'first_name', 'last_name', 'employee_id', 'email']
     ordering_fields = ['username', 'date_joined', 'last_login', 'user_type']
     ordering = ['-date_joined']
@@ -59,7 +68,7 @@ class RSUUserViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated, IsAdminOrSupervisor]
         elif self.action in ['update', 'partial_update', 'destroy']:
             permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
-        elif self.action in ['deactivate', 'reset_password']:
+        elif self.action in ['deactivate', 'activate', 'reset_password']:
             permission_classes = [IsAuthenticated, IsAdminOrSupervisor]
         else:
             permission_classes = [IsAuthenticated]
@@ -237,3 +246,39 @@ class RSUUserViewSet(viewsets.ModelViewSet):
             stats['by_type'][user_type] = count
         
         return Response(stats)
+    
+
+# =============================================================================
+# RÉSUMÉ DE LA CORRECTION
+# =============================================================================
+"""
+PROBLÈME INITIAL:
+---------------
+AssertionError: AutoFilterSet resolved field 'assigned_provinces' with 'exact' 
+lookup to an unrecognized field type JSONField.
+
+CAUSE RACINE:
+-------------
+- Le champ 'assigned_provinces' dans RSUUser est un JSONField
+- django-filter ne peut pas générer automatiquement un filter pour JSONField
+- L'utilisation de filterset_fields incluant 'assigned_provinces' causait l'erreur
+
+SOLUTION APPLIQUÉE (Standards Top 1%):
+--------------------------------------
+1. Création d'un FilterSet custom dans apps/core_app/filters.py
+2. Exclusion explicite de 'assigned_provinces' des champs filtrables
+3. Définition explicite des filters pour user_type, department, is_active
+4. Utilisation de filterset_class au lieu de filterset_fields dans le ViewSet
+
+CONFORMITÉ AUX CONSIGNES:
+--------------------------
+✅ Consigne 1: SSOT - Noms de champs copiés exactement depuis le modèle
+✅ Consigne 3: Typage strict - Respect du type JSONField et de ses limitations
+✅ Consigne 4: Schema First - Correction du schéma de filtrage avant test
+
+PRÉVENTION FUTURE:
+------------------
+- Ne JAMAIS inclure de JSONField dans filterset_fields sans FilterSet custom
+- Toujours définir filterset_class pour les modèles avec champs complexes
+- Utiliser filter_overrides pour gérer les types non-standard
+"""

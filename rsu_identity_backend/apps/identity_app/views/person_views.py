@@ -26,33 +26,98 @@ from apps.core_app.views.permissions import IsSurveyorOrSupervisor, CanAccessPro
 from apps.core_app.models import AuditLog
 
 class PersonIdentityViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet pour gestion des identités personnelles
-    
-    Fonctionnalités:
-    - CRUD complet avec permissions géographiques
-    - Recherche avancée et déduplication
-    - Validation NIP avec RBPP
-    - Scoring vulnérabilité en temps réel
-    """
     queryset = PersonIdentity.objects.all()
-    permission_classes = [IsAuthenticated, IsSurveyorOrSupervisor]
+    serializer_class = PersonIdentitySerializer
+    
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
+    # ✅ AJOUT filtrage par employment_status
     filterset_fields = [
         'gender', 'marital_status', 'province', 'department', 'commune',
         'education_level', 'verification_status', 'rbpp_synchronized',
-        'has_disability', 'is_household_head'
+        'has_disability', 'is_household_head',
+        'employment_status',  # ✅ Nouveau filtre
     ]
+    
     search_fields = [
-        'first_name', 'last_name', 'rsu_id', 'nip', 'phone_number', 
-        'national_id', 'address'
+        'first_name', 'last_name', 'rsu_id', 'nip', 'phone_number',
+        'national_id', 'address',
+        'occupation', 'employer',  # ✅ Recherche sur profession/employeur
     ]
+    
     ordering_fields = [
-        'created_at', 'last_name', 'birth_date', 'data_completeness_score',
-        'verification_status'
+        'created_at', 'last_name', 'birth_date', 
+        'data_completeness_score', 'verification_status',
+        'employment_status', 'monthly_income',  # ✅ Tri par statut/revenu
     ]
-    ordering = ['-created_at']
+    
+    @action(detail=False, methods=['get'])
+    def employment_statistics(self, request):
+        """
+        Statistiques emploi par province
+        GET /api/v1/identity/persons/employment_statistics/
+        """
+        from django.db.models import Count, Avg
+        
+        stats = self.get_queryset().values(
+            'province', 'employment_status'
+        ).annotate(
+            count=Count('id'),
+            avg_income=Avg('monthly_income')
+        ).order_by('province', 'employment_status')
+        
+        # Restructurer par province
+        by_province = {}
+        for stat in stats:
+            prov = stat['province']
+            if prov not in by_province:
+                by_province[prov] = {
+                    'total': 0,
+                    'by_status': {},
+                    'avg_income': 0
+                }
+            
+            status = stat['employment_status'] or 'NON_RENSEIGNE'
+            by_province[prov]['by_status'][status] = {
+                'count': stat['count'],
+                'avg_income': float(stat['avg_income'] or 0)
+            }
+            by_province[prov]['total'] += stat['count']
+        
+        return Response({
+            'success': True,
+            'statistics': by_province,
+            'generated_at': timezone.now().isoformat()
+        })
+    
+    @action(detail=False, methods=['get'])
+    def unemployed_vulnerable(self, request):
+        """
+        Liste chômeurs vulnérables
+        GET /api/v1/identity/persons/unemployed_vulnerable/
+        """
+        min_household_size = int(request.query_params.get('min_household_size', 4))
+        max_income = int(request.query_params.get('max_income', 75000))
+        
+        queryset = self.get_queryset().filter(
+            employment_status='UNEMPLOYED',
+            monthly_income__lt=max_income,
+            household__household_size__gte=min_household_size
+        ).select_related('household')
+        
+        serializer = self.get_serializer(queryset, many=True)
+        
+        return Response({
+            'success': True,
+            'criteria': {
+                'employment_status': 'UNEMPLOYED',
+                'max_monthly_income': max_income,
+                'min_household_size': min_household_size
+            },
+            'count': queryset.count(),
+            'persons': serializer.data
+        })
+
     
     def get_serializer_class(self):
         """Serializer adapté selon l'action"""

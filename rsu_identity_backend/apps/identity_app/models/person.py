@@ -199,6 +199,15 @@ class PersonIdentity(BaseModel):
         verbose_name="Numéro de Téléphone",
         help_text="Format: +241XXXXXXXX ou 0XXXXXXXX"
     )
+    # Ajouter ce champ
+    phone_number_alt = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        validators=[validate_gabonese_phone],
+        verbose_name="Téléphone Alternatif",
+        help_text="Numéro secondaire (optionnel)"
+    )
 
     email = models.EmailField(
         null=True, 
@@ -214,12 +223,43 @@ class PersonIdentity(BaseModel):
         blank=True,
         verbose_name="Niveau d'éducation"
     )
+    
     occupation = models.CharField(
         max_length=200,
         null=True,
         blank=True,
         verbose_name="Profession"
     )
+
+    employer = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        verbose_name="Employeur",
+        help_text="Nom de l'entreprise/organisation employeur"
+    )
+
+        # ✅ AJOUT après migration 0010
+    EMPLOYMENT_STATUS_CHOICES = [
+        ('EMPLOYED_FORMAL', 'Employé Formel (CDI/CDD)'),
+        ('EMPLOYED_INFORMAL', 'Employé Informel'),
+        ('SELF_EMPLOYED', 'Travailleur Indépendant'),
+        ('UNEMPLOYED', 'Sans Emploi'),
+        ('STUDENT', 'Étudiant'),
+        ('RETIRED', 'Retraité'),
+        ('HOMEMAKER', 'Au Foyer'),
+        ('UNABLE_TO_WORK', 'Inapte au Travail'),
+    ]
+    
+    employment_status = models.CharField(
+        max_length=20,
+        choices=EMPLOYMENT_STATUS_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Statut d'Emploi",
+        help_text="Situation professionnelle actuelle"
+    )
+    
     monthly_income = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -369,16 +409,30 @@ class PersonIdentity(BaseModel):
     )
     
     def clean(self):
-        """Validation et génération automatique RSU-ID"""
-        # ✅ CORRECTION: Générer RSU-ID AVANT validation si manquant
+        """Validation complète et génération automatique du RSU-ID"""
+
+        # ✅ Générer RSU-ID si manquant
         if not self.rsu_id:
-            from utils.gabonese_data import generate_rsu_id
             self.rsu_id = generate_rsu_id()
-        
-        # Validation dates
+
+        # ✅ Validation de la date de naissance
         if self.birth_date and self.birth_date > django_timezone.now().date():
-            raise ValidationError("La date de naissance ne peut pas être dans le futur")
-        
+            raise ValidationError({
+                'birth_date': "La date de naissance ne peut pas être dans le futur"
+            })
+
+        # ✅ Validation du statut d'emploi
+        if self.employment_status == 'EMPLOYED_FORMAL' and not self.employer:
+            raise ValidationError({
+                'employer': 'Employeur requis pour statut Employé Formel'
+            })
+
+        if self.employment_status == 'UNEMPLOYED' and self.employer:
+            raise ValidationError({
+                'employer': "Incohérent : chômeur ne peut avoir d'employeur"
+            })
+
+        # ✅ Appel à la validation parente
         super().clean()
 
     def save(self, *args, **kwargs):
