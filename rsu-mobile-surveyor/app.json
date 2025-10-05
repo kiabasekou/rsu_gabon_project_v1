@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "permissions": [
+      "CAMERA",
+      "ACCESS_FINE_LOCATION",
+      "ACCESS_COARSE_LOCATION",
+      "WRITE_EXTERNAL_STORAGE",
+      "READ_EXTERNAL_STORAGE"
+    ],
+    "android": {
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ]
+    },
+    "ios": {
+      "infoPlist": {
+        "NSCameraUsageDescription": "RSU Gabon a besoin d'accès à la caméra pour photographier les documents d'identité",
+        "NSLocationWhenInUseUsageDescription": "RSU Gabon utilise votre position pour géolocaliser les enrôlements",
+        "NSPhotoLibraryUsageDescription": "RSU Gabon a besoin d'accès aux photos pour uploader les justificatifs"
+      }
+    }
+  }
+}
