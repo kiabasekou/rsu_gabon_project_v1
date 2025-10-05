@@ -1,70 +1,79 @@
 # 🇬🇦 RSU Gabon - Fichiers à ignorer
 
-# Secrets et configuration
+##########################
+# 🔐 Secrets & Config
+##########################
 .env
-.env.local
-.env.staging  
-.env.production
+.env.*
 secrets/
 *.key
 *.pem
 
-# Bases de données
+##########################
+# 🗄️ Bases de données
+##########################
 *.sqlite3
 *.db
 db.sqlite3
 
-# Logs
+##########################
+# 📜 Logs
+##########################
 *.log
-logs/
 *.log.*
+logs/
 
-# Cache Python
+##########################
+# 🐍 Python
+##########################
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
 *.so
-
-# Environnements virtuels
+.Python
+*.egg-info/
 venv/
 env/
 ENV/
 
-# Node modules
+##########################
+# 🧰 Node.js
+##########################
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build outputs
+##########################
+# 🏗️ Build & Static
+##########################
 build/
 dist/
-*.egg-info/
+staticfiles/
 
-# IDE
+##########################
+# 🧠 IDE & Éditeurs
+##########################
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS
+##########################
+# 🖥️ Système d'exploitation
+##########################
 .DS_Store
 Thumbs.db
 
-# Données sensibles
+##########################
+# 🔒 Données sensibles
+##########################
 data/backups/
 data/personal-data/
 compliance/sensitive/
 
-
-# Certificates
+##########################
+# 🔐 Certificats
+##########################
 *.crt
 *.csr
 certificates/
-
-# Build outputs
-build/
-dist/
-staticfiles/
