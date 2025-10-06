@@ -1,11 +1,7 @@
-# =============================================================================
-# FICHIER: rsu_identity/urls.py (PRINCIPAL CORRIGÉ)
-# CORRECTION: Éliminer duplications et structure claire
-# =============================================================================
-
 """
 🇬🇦 RSU Gabon - URLs Configuration Principale
 Standards Top 1% - Architecture RESTful Optimisée
+MISE À JOUR: Intégration module Analytics
 """
 from django.contrib import admin
 from django.urls import path, include
@@ -28,10 +24,7 @@ from rest_framework import status
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def api_root(request):
-    """
-    Point d'entrée principal des APIs RSU Gabon
-    Documentation et navigation des endpoints
-    """
+    """Point d'entrée principal des APIs RSU Gabon"""
     return Response({
         'message': '🇬🇦 Bienvenue sur les APIs RSU Gabon',
         'version': 'v1.0.0',
@@ -50,7 +43,10 @@ def api_root(request):
             'identity': {
                 'persons': request.build_absolute_uri('/api/v1/identity/persons/'),
                 'households': request.build_absolute_uri('/api/v1/identity/households/'),
-                'geographic_data': request.build_absolute_uri('/api/v1/identity/geographic-data/')
+            },
+            'analytics': {
+                'dashboard': request.build_absolute_uri('/api/v1/analytics/dashboard/'),
+                'province_stats': request.build_absolute_uri('/api/v1/analytics/province-stats/'),
             }
         },
         'authentication': {
@@ -67,7 +63,7 @@ urlpatterns = [
     # Point d'entrée API
     path('api/', api_root, name='api-root'),
     
-    # Documentation API
+    # Documentation automatique OpenAPI
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
@@ -76,24 +72,24 @@ urlpatterns = [
     path('api/v1/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/v1/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
-    # APIs REST v1 - STRUCTURE CLAIRE SANS DUPLICATION
+    # Apps APIs
     path('api/v1/core/', include('apps.core_app.urls')),
     path('api/v1/identity/', include('apps.identity_app.urls')),
-    
-    # Health Checks & Monitoring
-    path('health/', include('health_check.urls')),
-
-    #SERVICES APP
     path('api/v1/services/', include('apps.services_app.urls')),
-
+    path('api/v1/analytics/', include('apps.analytics.urls')),  # ✅ NOUVEAU
+    
+    # Health Check
+    path('health/', include('health_check.urls')),
 ]
 
-# Servir les fichiers statiques en développement
+# Fichiers statiques en développement
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     
-    # Debug Toolbar si activé
+    # Debug Toolbar
     if 'debug_toolbar' in settings.INSTALLED_APPS:
         import debug_toolbar
-        urlpatterns = [path('__debug__/', include(debug_toolbar.urls))] + urlpatterns
+        urlpatterns = [
+            path('__debug__/', include(debug_toolbar.urls)),
+        ] + urlpatterns

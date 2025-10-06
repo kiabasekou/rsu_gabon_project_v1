@@ -1,70 +1,72 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * 🇬🇦 RSU Gabon - Dashboard Principal
+ * Standards Top 1% - Intégration APIs Django REST
+ * Fichier: rsu_admin_dashboard/src/pages/Dashboard.jsx
+ */
+
+import React, { useState } from 'react';
 import Header from '../components/Layout/Header';
 import TabNavigation from '../components/Dashboard/TabNavigation';
 import OverviewTab from '../components/Dashboard/OverviewTab';
 import BeneficiariesTab from '../components/Dashboard/BeneficiariesTab';
-import { Activity, AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
+import { useDashboard, useBeneficiaries } from '../hooks/useDashboard';
+import apiClient from '../services/api/apiClient';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [dashboardData, setDashboardData] = useState(null);
-  const [currentUser] = useState({
+  const [currentUser] = useState(() => apiClient.getCurrentUser() || {
     username: 'admin',
     user_type: 'ADMIN'
   });
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  // ✅ Hook connecté aux vraies APIs
+  const {
+    data: dashboardData,
+    loading: dashboardLoading,
+    error: dashboardError,
+    refresh: refreshDashboard,
+    lastUpdate
+  } = useDashboard();
 
-  const loadDashboardData = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      setDashboardData({
-        stats: {
-          total_beneficiaries: 45820,
-          total_households: 12450,
-          active_programs: 8,
-          avg_vulnerability_score: 42.3,
-          beneficiaries_growth: '+12.5% ce mois',
-          households_growth: '+8.3% ce mois',
-        }
-      });
-      
-      setLoading(false);
-    } catch (err) {
-      setError('Erreur de connexion au backend Django');
-      setLoading(false);
-    }
-  };
+  // ✅ Hook pour bénéficiaires
+  const {
+    beneficiaries,
+    loading: beneficiariesLoading,
+    error: beneficiariesError,
+    pagination,
+    refresh: refreshBeneficiaries
+  } = useBeneficiaries();
 
   const handleSearch = (params) => {
-    console.log('Recherche avec paramètres:', params);
+    console.log('🔍 Recherche avec paramètres:', params);
+    // TODO: Implémenter recherche API
   };
 
-  const handleExport = () => {
-    console.log('Export des données');
+  const handleExport = async () => {
+    console.log('📥 Export des données...');
+    // TODO: Implémenter export CSV/Excel
   };
 
-  if (error && !loading) {
+  // Gestion erreur
+  if (dashboardError && !dashboardLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
           <AlertCircle className="text-red-600 mx-auto mb-4" size={64} />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Erreur</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={loadDashboardData}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Réessayer
-          </button>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Erreur de Connexion</h2>
+          <p className="text-gray-600 mb-4">{dashboardError}</p>
+          <div className="space-y-2">
+            <button
+              onClick={refreshDashboard}
+              className="w-full px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Réessayer
+            </button>
+            <p className="text-xs text-gray-500">
+              Vérifiez que le backend Django est démarré sur http://localhost:8000
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -74,8 +76,8 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-100">
       <Header 
         currentUser={currentUser}
-        onRefresh={loadDashboardData}
-        loading={loading}
+        onRefresh={activeTab === 'overview' ? refreshDashboard : refreshBeneficiaries}
+        loading={dashboardLoading || beneficiariesLoading}
       />
 
       <TabNavigation 
@@ -84,44 +86,49 @@ export default function Dashboard() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Indicateur de dernière mise à jour */}
+        {lastUpdate && (
+          <div className="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle size={18} className="text-blue-600" />
+              <span className="text-sm text-blue-800">
+                Données actualisées : {lastUpdate.toLocaleTimeString('fr-FR')}
+              </span>
+            </div>
+            <span className="text-xs text-blue-600 font-mono">
+              Backend: {process.env.REACT_APP_API_URL}
+            </span>
+          </div>
+        )}
+
         {activeTab === 'overview' && (
           <OverviewTab 
-            data={dashboardData}
-            loading={loading}
+            data={dashboardData} 
+            loading={dashboardLoading}
           />
         )}
-        
+
         {activeTab === 'beneficiaries' && (
-          <BeneficiariesTab 
-            loading={loading}
+          <BeneficiariesTab
+            beneficiaries={beneficiaries}
+            loading={beneficiariesLoading}
+            pagination={pagination}
             onSearch={handleSearch}
             onExport={handleExport}
           />
         )}
-        
+
         {activeTab === 'analytics' && (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <Activity className="text-blue-600 mx-auto mb-4" size={64} />
             <h3 className="text-xl font-bold text-gray-800 mb-2">
-              Analytics IA Avancées
+              🤖 Module Analytics IA
             </h3>
-            <p className="text-gray-600 mb-4">
-              Scoring vulnérabilité • Prédictions éligibilité • ML insights
+            <p className="text-gray-600">
+              Fonctionnalités avancées d'analyse prédictive en développement
             </p>
-            <div className="text-sm text-gray-500">
-              📡 Endpoints: /services/vulnerability-assessment/statistics/
-            </div>
           </div>
         )}
       </main>
-
-      <footer className="bg-white border-t border-gray-200 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-center text-sm text-gray-500">
-            RSU Gabon © 2025 - Dashboard Admin Modulaire • Django REST Framework • Standards Top 1%
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

@@ -1,14 +1,13 @@
 """
-URLs pour l'app analytics
+🇬🇦 RSU Gabon - Analytics URLs
+Routes pour module Analytics
 """
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django.urls import path
+from .views import DashboardStatsAPIView, ProvinceStatsAPIView
 
 app_name = 'analytics'
 
-router = DefaultRouter()
-# TODO: Ajouter les ViewSets ici
-
 urlpatterns = [
-    path('', include(router.urls)),
+    path('dashboard/', DashboardStatsAPIView.as_view(), name='dashboard-stats'),
+    path('province-stats/', ProvinceStatsAPIView.as_view(), name='province-stats'),
 ]

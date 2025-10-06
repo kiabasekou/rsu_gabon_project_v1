@@ -1,79 +1,95 @@
-# 🇬🇦 RSU Gabon - Fichiers à ignorer
+# RSU Gabon - Fichiers à ignorer
 
-##########################
-# 🔐 Secrets & Config
-##########################
-.env
-.env.*
-secrets/
-*.key
-*.pem
+### Backend Django ###
+rsu_identity_backend/__pycache__/
+rsu_identity_backend/**/__pycache__/
+rsu_identity_backend/**/*.pyc
+rsu_identity_backend/**/*.pyo
+rsu_identity_backend/**/*.so
+rsu_identity_backend/.Python
+rsu_identity_backend/**/*.egg-info/
+rsu_identity_backend/venv/
+rsu_identity_backend/env/
+rsu_identity_backend/ENV/
 
-##########################
-# 🗄️ Bases de données
-##########################
-*.sqlite3
-*.db
-db.sqlite3
+# Base de données développement
+rsu_identity_backend/db.sqlite3
+rsu_identity_backend/db.sqlite3-journal
+rsu_identity_backend/*.db
 
-##########################
-# 📜 Logs
-##########################
-*.log
-*.log.*
-logs/
+# Logs
+rsu_identity_backend/logs/
+rsu_identity_backend/**/*.log
+rsu_identity_backend/**/*.log.*
 
-##########################
-# 🐍 Python
-##########################
-__pycache__/
-*.py[cod]
-*.so
-.Python
-*.egg-info/
-venv/
-env/
-ENV/
+# Tests
+rsu_identity_backend/.pytest_cache/
+rsu_identity_backend/htmlcov/
+rsu_identity_backend/.coverage
+rsu_identity_backend/test_results.log
 
-##########################
-# 🧰 Node.js
-##########################
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Fichiers temporaires
+rsu_identity_backend/run_test.sh
+rsu_identity_backend/.env
+rsu_identity_backend/.env.*
 
-##########################
-# 🏗️ Build & Static
-##########################
-build/
-dist/
-staticfiles/
+# Migrations (optionnel - décommenter si nécessaire)
+# rsu_identity_backend/apps/**/migrations/
 
-##########################
-# 🧠 IDE & Éditeurs
-##########################
+### Frontend Dashboard ###
+rsu_admin_dashboard/node_modules/
+rsu_admin_dashboard/build/
+rsu_admin_dashboard/dist/
+rsu_admin_dashboard/.cache/
+rsu_admin_dashboard/coverage/
+
+# Logs npm
+rsu_admin_dashboard/npm-debug.log*
+rsu_admin_dashboard/yarn-debug.log*
+rsu_admin_dashboard/yarn-error.log*
+
+# Environnement
+rsu_admin_dashboard/.env
+rsu_admin_dashboard/.env.local
+rsu_admin_dashboard/.env.development.local
+rsu_admin_dashboard/.env.test.local
+rsu_admin_dashboard/.env.production.local
+
+# Lock files (garder package-lock.json)
+rsu_admin_dashboard/yarn.lock
+
+### Mobile App ###
+rsu-mobile-surveyor/node_modules/
+rsu-mobile-surveyor/.expo/
+rsu-mobile-surveyor/dist/
+rsu-mobile-surveyor/web-build/
+
+### IDE & Éditeurs ###
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
 
-##########################
-# 🖥️ Système d'exploitation
-##########################
+### OS ###
 .DS_Store
 Thumbs.db
+desktop.ini
 
-##########################
-# 🔒 Données sensibles
-##########################
-data/backups/
-data/personal-data/
-compliance/sensitive/
+### Documentation redondante ###
+docs/tests/
+docs/technical/CORRECTIONS_IMPORTS_CRITIQUES.md
 
-##########################
-# 🔐 Certificats
-##########################
+### Certificats & Secrets ###
+*.key
+*.pem
 *.crt
 *.csr
 certificates/
+secrets/
+
+### Données sensibles ###
+data/backups/
+data/personal-data/
+compliance/sensitive/

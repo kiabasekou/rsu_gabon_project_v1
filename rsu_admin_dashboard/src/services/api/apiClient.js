@@ -1,3 +1,5 @@
+// Fichier: rsu_admin_dashboard/src/services/api/apiClient.js
+
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
 
 class APIClient {
@@ -21,8 +23,9 @@ class APIClient {
       const response = await fetch(`${this.baseURL}${endpoint}`, config);
       
       if (response.status === 401) {
-        await this.refreshToken();
-        return this.request(endpoint, options);
+        console.error('401 Unauthorized');
+        localStorage.clear();
+        throw new Error('Unauthorized');
       }
 
       if (!response.ok) {
@@ -33,25 +36,6 @@ class APIClient {
     } catch (error) {
       console.error('API Error:', error);
       throw error;
-    }
-  }
-
-  async refreshToken() {
-    const refreshToken = localStorage.getItem('refresh_token');
-    if (!refreshToken) throw new Error('No refresh token');
-
-    const response = await fetch(`${this.baseURL}/auth/token/refresh/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh: refreshToken }),
-    });
-
-    if (response.ok) {
-      const { access } = await response.json();
-      localStorage.setItem('access_token', access);
-    } else {
-      localStorage.clear();
-      window.location.href = '/login';
     }
   }
 
@@ -66,6 +50,17 @@ class APIClient {
       body: JSON.stringify(data),
     });
   }
+
+  // AJOUTEZ CETTE MÉTHODE
+  getCurrentUser() {
+    const userJson = localStorage.getItem('user');
+    return userJson ? JSON.parse(userJson) : null;
+  }
+
+  isAuthenticated() {
+    return !!localStorage.getItem('access_token');
+  }
 }
 
-export default new APIClient();
+const client = new APIClient();
+export default client;

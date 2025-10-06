@@ -39,7 +39,6 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     'apps.core_app',
     'apps.identity_app', 
-    'apps.eligibility',
     'apps.programs_app',
     'apps.surveys',
     'apps.family_graph',
