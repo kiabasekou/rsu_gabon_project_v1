@@ -80,6 +80,9 @@ urlpatterns = [
     
     # Health Check
     path('health/', include('health_check.urls')),
+
+
+    path('api/v1/programs/', include('apps.programs_app.urls')),  # AJOUTER
 ]
 
 # Fichiers statiques en développement

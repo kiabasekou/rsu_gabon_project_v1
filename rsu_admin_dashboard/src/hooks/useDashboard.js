@@ -1,10 +1,10 @@
 /**
- * 🇬🇦 RSU Gabon - Dashboard Hook
- * Standards Top 1% - Gestion état Dashboard
+ * 🇬🇦 RSU Gabon - Dashboard Hook CORRIGÉ
+ * Standards Top 1% - FIX Boucle Infinie
  * Fichier: rsu_admin_dashboard/src/hooks/useDashboard.js
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import apiClient from '../services/api/apiClient';
 import ENDPOINTS from '../services/api/endpoints';
 
@@ -22,7 +22,6 @@ export function useDashboard() {
     setError(null);
 
     try {
-      // ✅ VRAIE REQUÊTE API au lieu de données simulées
       const response = await apiClient.get(ENDPOINTS.ANALYTICS.DASHBOARD);
       
       setData(response);
@@ -35,7 +34,7 @@ export function useDashboard() {
       setError(err.message || 'Erreur de connexion au backend');
       setLoading(false);
     }
-  }, []);
+  }, []); // ✅ Pas de dépendances - stable
 
   /**
    * Chargement initial
@@ -61,7 +60,7 @@ export function useDashboard() {
 }
 
 /**
- * Hook pour bénéficiaires
+ * Hook pour bénéficiaires - CORRIGÉ
  */
 export function useBeneficiaries(filters = {}) {
   const [beneficiaries, setBeneficiaries] = useState([]);
@@ -73,6 +72,14 @@ export function useBeneficiaries(filters = {}) {
     total: 0,
   });
 
+  // ✅ Utiliser useRef pour éviter re-création fonction à chaque render
+  const filtersRef = useRef(filters);
+  
+  // ✅ Mettre à jour ref seulement si filters change vraiment
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+
   const loadBeneficiaries = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -81,7 +88,7 @@ export function useBeneficiaries(filters = {}) {
       const response = await apiClient.get(ENDPOINTS.IDENTITY.PERSONS, {
         page: pagination.page,
         page_size: pagination.pageSize,
-        ...filters,
+        ...filtersRef.current, // ✅ Utiliser ref au lieu de dépendance
       });
       
       setBeneficiaries(response.results || []);
@@ -90,14 +97,24 @@ export function useBeneficiaries(filters = {}) {
         total: response.count || 0,
       }));
       setLoading(false);
+      
+      console.log('✅ Beneficiaries loaded:', response.results?.length);
     } catch (err) {
+      console.error('❌ Beneficiaries error:', err);
       setError(err.message);
       setLoading(false);
     }
-  }, [filters, pagination.page, pagination.pageSize]);
+  }, [pagination.page, pagination.pageSize]); // ✅ Seulement pagination, pas filters
 
+  // ✅ Chargement initial - SEULEMENT au montage du composant
   useEffect(() => {
     loadBeneficiaries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ✅ Tableau vide = exécution unique
+
+  // ✅ Fonction refresh manuelle
+  const refresh = useCallback(() => {
+    return loadBeneficiaries();
   }, [loadBeneficiaries]);
 
   return {
@@ -105,6 +122,6 @@ export function useBeneficiaries(filters = {}) {
     loading,
     error,
     pagination,
-    refresh: loadBeneficiaries,
+    refresh,
   };
 }

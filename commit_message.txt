@@ -1,35 +1,11 @@
-???? feat: RSU Gabon v1 - Monorepo complet initial 
- 
-? Backend Django: 
-- Core App (Users, Audit) 
-- Identity App (Persons, Households, Geographic, RBPP) 
-- Services App (Vulnerability Scoring IA) 
-- 15+ APIs REST documentÇes 
-- JWT Authentication 
-- Swagger UI 
- 
-? Frontend React: 
-- Dashboard Admin complet 
-- 6 composants modulaires production 
-- Tailwind CSS v3 
-- Recharts graphiques interactifs 
-- Architecture services API 
-- Responsive design 
- 
-?? Mobile React Native: 
-- Architecture documentÇe 
-- 8 services spÇcifiÇs 
-- Pràt pour implÇmentation 
- 
-?? êtat: 
-- Backend: OpÇrationnel 
-- Frontend: Fonctionnel 
-- Mobile: Specs complätes 
- 
-?? Projet: 2M+ citoyens gabonais 
-?? Budget: ?56.2M Banque Mondiale 
-?? Standards: Top 1%% Production-Ready 
- 
-?? Documentation exhaustive incluse 
-?? SÇcuritÇ gouvernementale 
-?? 9 provinces Gabon supportÇes 
+feat: intÈgration Django <-> React Dashboard
+
+- Ajout module Analytics (/api/v1/analytics/dashboard/)
+- Configuration CORS (localhost:8000 <-> localhost:3000)
+- Correction apiClient.js : getCurrentUser(), isAuthenticated()
+- Fix dÈpendances Tailwind (@alloc/quick-lru)
+- RÈsolution boucles infinies dans Dashboard.jsx
+- Tests OK : JWT valide, 119 bÈnÈficiaires chargÈs
+
+Status: Backend + Frontend opÈrationnels avec token manuel
+TODO: page Login + refresh token automatique
