@@ -9,8 +9,10 @@ import Header from '../components/Layout/Header';
 import TabNavigation from '../components/Dashboard/TabNavigation';
 import OverviewTab from '../components/Dashboard/OverviewTab';
 import BeneficiariesTab from '../components/Dashboard/BeneficiariesTab';
+import ProgramsTab from '../components/Dashboard/ProgramsTab';  // ← AJOUTER
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import { useDashboard, useBeneficiaries } from '../hooks/useDashboard';
+import { usePrograms } from '../hooks/usePrograms';  // ← AJOUTER
 import apiClient from '../services/api/apiClient';
 
 export default function Dashboard() {
@@ -71,6 +73,13 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  // Dans Dashboard.jsx, juste avant le return
+console.log('📊 Dashboard state:');
+console.log('   activeTab:', activeTab);
+console.log('   programs:', programs);
+console.log('   programs.length:', programs?.length);
+console.log('   programsLoading:', programsLoading);
 
   return (
     <div className="min-h-screen bg-gray-100">

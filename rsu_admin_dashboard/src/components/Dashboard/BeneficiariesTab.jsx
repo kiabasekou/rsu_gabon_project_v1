@@ -52,17 +52,35 @@ export default function BeneficiariesTab() {
     );
   };
 
+  // ✅ APRÈS - Avec gestion des valeurs nulles
   const getVulnerabilityBadge = (score) => {
-    if (!score) return <span className="text-gray-400 text-sm">N/A</span>;
+    // Convertir en nombre et gérer null/undefined
+    const numScore = score ? parseFloat(score) : 0;
     
-    let color = 'bg-green-100 text-green-800';
-    if (score >= 75) color = 'bg-red-100 text-red-800';
-    else if (score >= 50) color = 'bg-orange-100 text-orange-800';
-    else if (score >= 25) color = 'bg-yellow-100 text-yellow-800';
-    
+    if (numScore >= 70) {
+      return (
+        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded">
+          EXTRÊME ({numScore.toFixed(1)})
+        </span>
+      );
+    }
+    if (numScore >= 50) {
+      return (
+        <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded">
+          ÉLEVÉ ({numScore.toFixed(1)})
+        </span>
+      );
+    }
+    if (numScore >= 30) {
+      return (
+        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded">
+          MODÉRÉ ({numScore.toFixed(1)})
+        </span>
+      );
+    }
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${color}`}>
-        {score.toFixed(1)}
+      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">
+        FAIBLE ({numScore.toFixed(1)})
       </span>
     );
   };
