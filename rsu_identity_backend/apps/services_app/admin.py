@@ -15,32 +15,7 @@ from .models import (
 )
 from .models import GeographicInterventionCost
 
-@admin.register(SocialProgram)
-class SocialProgramAdmin(admin.ModelAdmin):
-    """Administration des programmes sociaux"""
-    
-    list_display = [
-        'code', 'name', 'annual_budget', 'max_beneficiaries',
-        'current_budget_utilization', 'is_active'
-    ]
-    list_filter = ['is_active', 'program_type', 'automated_enrollment', 'target_provinces']
-    search_fields = ['name', 'code', 'description']
-    readonly_fields = ['current_budget_utilization', 'remaining_budget']
-    
-    fieldsets = (
-        ('Informations Générales', {
-            'fields': ('code', 'name', 'description', 'program_type', 'is_active')
-        }),
-        ('Configuration Budgétaire', {
-            'fields': ('annual_budget', 'benefit_amount_fcfa', 'max_beneficiaries', 'duration_months')
-        }),
-        ('Critères d\'Éligibilité', {
-            'fields': ('eligibility_criteria', 'requires_documents', 'automated_enrollment')
-        }),
-        ('Ciblage Géographique', {
-            'fields': ('target_provinces', 'urban_rural_preference')
-        })
-    )
+
 
 @admin.register(SocialProgramEligibility)
 class SocialProgramEligibilityAdmin(admin.ModelAdmin):

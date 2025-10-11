@@ -11,7 +11,8 @@ from django.db.models import Count, Avg, Q, F, Sum
 from django.utils import timezone
 
 from apps.identity_app.models import PersonIdentity, GeographicData
-from ..models import VulnerabilityAssessment, SocialProgram
+from ..models import VulnerabilityAssessment
+from apps.programs_app.models import SocialProgram  
 from .base_service import BaseService
 
 logger = logging.getLogger(__name__)

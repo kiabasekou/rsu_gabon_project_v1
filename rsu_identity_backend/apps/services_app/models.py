@@ -9,163 +9,10 @@ from django.db.models import JSONField
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from apps.core_app.models import BaseModel
-
+from apps.programs_app.models import SocialProgram as MasterProgram
 from django.conf import settings
-
-
-# ===================================================================
-# MODÈLE PRINCIPAL: SOCIAL PROGRAM
-# ===================================================================
-
-class SocialProgram(BaseModel):
-    """
-    Modèle maître des programmes sociaux gouvernementaux
-    Budgets et paramètres configurables par administrateurs
-    """
-    
-    # Identifiants programme
-    code = models.CharField(
-        max_length=20,
-        unique=True,
-        verbose_name="Code programme",
-        help_text="Code unique (ex: AIDE_ALIMENTAIRE)"
-    )
-    
-    name = models.CharField(
-        max_length=100,
-        verbose_name="Nom du programme"
-    )
-    
-    description = models.TextField(
-        verbose_name="Description détaillée"
-    )
-    
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name="Programme actif"
-    )
-    
-    # BUDGETS AJUSTABLES par administrateurs
-    annual_budget = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
-        validators=[MinValueValidator(0)],
-        verbose_name="Budget annuel (FCFA)"
-    )
-    
-    budget_used_fcfa = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
-        default=0,
-        validators=[MinValueValidator(0)],
-        verbose_name="Budget utilisé (FCFA)"
-    )
-    
-    benefit_amount_fcfa = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(0)],
-        verbose_name="Montant par bénéficiaire (FCFA)"
-    )
-    
-    # Paramètres opérationnels
-    duration_months = models.PositiveIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(60)],
-        verbose_name="Durée standard (mois)"
-    )
-    
-    max_beneficiaries = models.PositiveIntegerField(
-        validators=[MinValueValidator(1)],
-        verbose_name="Nombre max bénéficiaires"
-    )
-    
-    current_beneficiaries = models.PositiveIntegerField(
-        default=0,
-        verbose_name="Bénéficiaires actuels"
-    )
-    
-    # Critères configurables
-    eligibility_criteria = JSONField(
-        default=dict,
-        verbose_name="Critères d'éligibilité",
-        help_text="Configuration JSON des critères"
-    )
-    
-    target_provinces = JSONField(
-        default=list,
-        verbose_name="Provinces ciblées"
-    )
-    
-    urban_rural_preference = models.CharField(
-        max_length=10,
-        choices=[
-            ('URBAN', 'Zones urbaines'),
-            ('RURAL', 'Zones rurales'),
-            ('BOTH', 'Urbain et rural'),
-        ],
-        default='BOTH',
-        verbose_name="Préférence géographique"
-    )
-    
-    program_type = models.CharField(
-        max_length=20,
-        choices=[
-            ('CASH_TRANSFER', 'Transfert monétaire'),
-            ('FOOD_AID', 'Aide alimentaire'),
-            ('HEALTHCARE', 'Santé'),
-            ('EDUCATION', 'Éducation'),
-            ('HOUSING', 'Logement'),
-            ('TRAINING', 'Formation'),
-            ('MICROCREDIT', 'Micro-crédit'),
-        ],
-        verbose_name="Type de programme"
-    )
-    
-    automated_enrollment = models.BooleanField(
-        default=False,
-        verbose_name="Inscription automatique"
-    )
-    
-    requires_documents = models.BooleanField(
-        default=True,
-        verbose_name="Nécessite documents"
-    )
-    
-    # Propriétés calculées
-    @property
-    def remaining_budget(self):
-        return self.annual_budget - self.budget_used_fcfa
-    
-    @property
-    def budget_utilization_percentage(self):
-        if self.annual_budget > 0:
-            return (self.budget_used_fcfa / self.annual_budget) * 100
-        return 0
-    
-    @property
-    def current_budget_utilization(self):
-        return f"{self.budget_utilization_percentage:.1f}%"
-    
-    @property
-    def can_accept_new_beneficiaries(self):
-        return (
-            self.is_active and 
-            self.current_beneficiaries < self.max_beneficiaries and
-            self.remaining_budget >= self.benefit_amount_fcfa
-        )
-    
-    @property
-    def is_budget_available(self):
-        return self.remaining_budget >= self.benefit_amount_fcfa
-    
-    class Meta:
-        db_table = 'services_social_programs'
-        verbose_name = "Programme Social"
-        verbose_name_plural = "Programmes Sociaux"
-        ordering = ['name']
-        
-    def __str__(self):
-        return f"{self.code} - {self.name}"
+from apps.identity_app.models.person import PersonIdentity
+from apps.programs_app.models import SocialProgram
 
 
 # ===================================================================
@@ -294,12 +141,16 @@ class SocialProgramEligibility(BaseModel):
 # ===================================================================
 
 class VulnerabilityAssessment(BaseModel):
-    """
-    Évaluation vulnérabilité multidimensionnelle
-    """
+    """Évaluation vulnérabilité liée à un programme"""
     
+    program = models.ForeignKey(
+        MasterProgram,  # ← Référence vers programs_app
+        on_delete=models.CASCADE,
+        related_name='vulnerability_assessments',
+        verbose_name="Programme"
+    )
     person = models.ForeignKey(
-        'identity_app.PersonIdentity',
+        PersonIdentity,
         on_delete=models.CASCADE,
         related_name='vulnerability_assessments',
         verbose_name="Personne"

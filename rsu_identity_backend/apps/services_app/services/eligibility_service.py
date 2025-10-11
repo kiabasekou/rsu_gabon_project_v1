@@ -14,10 +14,13 @@ from django.db.models import Count, Avg, Q
 # Importation des modèles requis
 from apps.identity_app.models import PersonIdentity
 from ..models import (
-    SocialProgramEligibility, 
+     
     VulnerabilityAssessment, 
-    SocialProgram
+    
 )
+
+from apps.programs_app.models import SocialProgram  # ← Source unique
+from ..admin import SocialProgramEligibility # ← Source unique
 
 from .base_service import BaseService
 
