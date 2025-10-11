@@ -1,452 +1,409 @@
 /**
- * 🇬🇦 RSU Gabon - Programs Tab
- * Gestion complète des programmes sociaux
- * Fichier: src/components/Dashboard/ProgramsTab.jsx
+ * 🇬🇦 RSU Gabon - Programs Tab Enhanced
+ * Standards Top 1% - Liste et Détails Programmes
+ * Fichier: rsu_admin_dashboard/src/components/Dashboard/ProgramsTab.jsx
  */
 
-import React, { useState } from 'react';
-import { 
-  Folder, DollarSign, Users, Calendar, CheckCircle, 
-  XCircle, Clock, AlertCircle, TrendingUp, Filter,
-  Plus, Eye, Edit, Trash2, Play, Pause, Lock
+import React, { useState, useEffect } from 'react';
+import {
+  Plus, Search, Filter, RefreshCw, Grid, List,
+  DollarSign, Users, Calendar, TrendingUp, Eye
 } from 'lucide-react';
+import { programsAPI } from '../../services/api/programsAPI';
+import ProgramDetail from './ProgramDetail';
 
-export default function ProgramsTab({ programs, loading, onRefresh }) {
-  console.log('🎯 ProgramsTab rendered');
-  console.log('   programs prop:', programs);
-  console.log('   loading prop:', loading);
-  
-
-    // ================================================================================
-    // COMPOSANT PRINCIPAL
-    // ================================================================================
-
-
+export default function ProgramsTab() {
+  const [programs, setPrograms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [filters, setFilters] = useState({
-    status: 'ALL',
-    category: 'ALL',
-    search: ''
+    status: '',
+    search: '',
+    ordering: '-created_at'
   });
-  const [view, setView] = useState('list'); // 'list' | 'details' | 'create'
 
-  // Données mock pour démo (à remplacer par API)
-  const mockPrograms = programs.length > 0 ? programs : [
-    {
-      id: 1,
-      code: 'TMC-2025',
-      name: 'Transfert Monétaire Conditionnel',
-      category: { name: 'Transferts Monétaires', icon: '💰' },
-      status: 'ACTIVE',
-      total_budget: 1000000000,
-      budget_spent: 450000000,
-      budget_remaining: 550000000,
-      benefit_amount: 50000,
-      frequency: 'MONTHLY',
-      max_beneficiaries: 1000,
-      current_beneficiaries: 456,
-      start_date: '2025-01-01',
-      end_date: '2025-12-31',
-      is_active: true,
-      is_full: false,
-      managed_by_name: 'Jean Dupont',
-      enrollments_count: 456,
-      active_enrollments_count: 445,
-    },
-    {
-      id: 2,
-      code: 'BOURSE-EDU-2025',
-      name: 'Bourse Éducation Primaire',
-      category: { name: 'Éducation', icon: '🎓' },
-      status: 'ACTIVE',
-      total_budget: 500000000,
-      budget_spent: 180000000,
-      budget_remaining: 320000000,
-      benefit_amount: 75000,
-      frequency: 'MONTHLY',
-      max_beneficiaries: 500,
-      current_beneficiaries: 234,
-      start_date: '2025-01-15',
-      end_date: '2025-06-30',
-      is_active: true,
-      is_full: false,
-      managed_by_name: 'Marie Martin',
-      enrollments_count: 234,
-      active_enrollments_count: 230,
-    },
-    {
-      id: 3,
-      code: 'AMU-2025',
-      name: 'Assurance Maladie Universelle',
-      category: { name: 'Santé', icon: '🏥' },
-      status: 'PAUSED',
-      total_budget: 2000000000,
-      budget_spent: 850000000,
-      budget_remaining: 1150000000,
-      benefit_amount: 25000,
-      frequency: 'MONTHLY',
-      max_beneficiaries: 5000,
-      current_beneficiaries: 3200,
-      start_date: '2024-06-01',
-      end_date: null,
-      is_active: false,
-      is_full: false,
-      managed_by_name: 'Dr. Amina Ndong',
-      enrollments_count: 3200,
-      active_enrollments_count: 0,
+  useEffect(() => {
+    loadPrograms();
+  }, [filters]);
+
+  const loadPrograms = async () => {
+    try {
+      setLoading(true);
+      const data = await programsAPI.getPrograms(filters);
+      
+      // ✅ FIX: API retourne {count, results} avec pagination
+      const programsList = data.results || [];
+      
+      setPrograms(programsList);
+      console.log(`✅ Programs loaded: ${programsList.length}`);
+    } catch (error) {
+      console.error('Erreur chargement programmes:', error);
+      setPrograms([]); // ✅ Éviter les doublons en cas d'erreur
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const filteredPrograms = mockPrograms.filter(p => {
-    if (filters.status !== 'ALL' && p.status !== filters.status) return false;
-    if (filters.search && !p.name.toLowerCase().includes(filters.search.toLowerCase()) && 
-        !p.code.toLowerCase().includes(filters.search.toLowerCase())) return false;
-    return true;
-  });
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleViewProgram = (programId) => {
+    setSelectedProgram(programId);
+  };
+
+  const handleBackToList = () => {
+    setSelectedProgram(null);
+    loadPrograms(); // Rafraîchir la liste
+  };
+
+  // Si un programme est sélectionné, afficher les détails
+  if (selectedProgram) {
+    return <ProgramDetail programId={selectedProgram} onBack={handleBackToList} />;
+  }
 
   const getStatusBadge = (status) => {
     const styles = {
       ACTIVE: 'bg-green-100 text-green-800 border-green-300',
+      DRAFT: 'bg-blue-100 text-blue-800 border-blue-300',
       PAUSED: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      CLOSED: 'bg-gray-100 text-gray-800 border-gray-300',
-      DRAFT: 'bg-blue-100 text-blue-800 border-blue-300'
-    };
-    const icons = {
-      ACTIVE: <CheckCircle size={14} />,
-      PAUSED: <Pause size={14} />,
-      CLOSED: <Lock size={14} />,
-      DRAFT: <Edit size={14} />
+      CLOSED: 'bg-gray-100 text-gray-800 border-gray-300'
     };
     const labels = {
       ACTIVE: 'Actif',
+      DRAFT: 'Brouillon',
       PAUSED: 'Suspendu',
-      CLOSED: 'Clôturé',
-      DRAFT: 'Brouillon'
+      CLOSED: 'Clôturé'
     };
-    
     return (
-      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${styles[status]}`}>
-        {icons[status]}
-        {labels[status]}
+      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
+        {labels[status] || status}
       </span>
     );
   };
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (amount) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'XAF',
-      minimumFractionDigits: 0
-    }).format(value);
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
   };
 
-  const calculateBudgetPercentage = (spent, total) => {
-    return total > 0 ? Math.round((spent / total) * 100) : 0;
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
-
-  const calculateCapacityPercentage = (current, max) => {
-    return max > 0 ? Math.round((current / max) * 100) : 0;
-  };
-
-  // ================================================================================
-  // STATISTIQUES GLOBALES
-  // ================================================================================
-
-  const globalStats = {
-    total_programs: mockPrograms.length,
-    active_programs: mockPrograms.filter(p => p.status === 'ACTIVE').length,
-    total_budget: mockPrograms.reduce((sum, p) => sum + p.total_budget, 0),
-    budget_spent: mockPrograms.reduce((sum, p) => sum + p.budget_spent, 0),
-    total_beneficiaries: mockPrograms.reduce((sum, p) => sum + p.current_beneficiaries, 0),
-  };
-
-  // ================================================================================
-  // RENDU CONDITIONNEL PAR VUE
-  // ================================================================================
-
-  if (view === 'details' && selectedProgram) {
-    return <ProgramDetails program={selectedProgram} onBack={() => setView('list')} />;
-  }
-
-  if (view === 'create') {
-    return <ProgramForm onBack={() => setView('list')} onSuccess={() => { setView('list'); onRefresh?.(); }} />;
-  }
-
-  // ================================================================================
-  // VUE LISTE (DÉFAUT)
-  // ================================================================================
 
   return (
     <div className="space-y-6">
-      {/* En-tête avec statistiques */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold mb-2">Programmes Sociaux</h2>
-            <p className="text-purple-100">Gestion des programmes d'aide gouvernementale</p>
-          </div>
+      {/* En-tête */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Programmes Sociaux</h2>
+          <p className="text-gray-600 text-sm mt-1">
+            {programs.length} programme{programs.length > 1 ? 's' : ''} enregistré{programs.length > 1 ? 's' : ''}
+          </p>
+        </div>
+
+        <div className="flex gap-3">
           <button
-            onClick={() => setView('create')}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-semibold"
+            onClick={loadPrograms}
+            disabled={loading}
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 transition-colors disabled:opacity-50"
           >
-            <Plus size={20} />
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            Actualiser
+          </button>
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors">
+            <Plus size={18} />
             Nouveau Programme
           </button>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <StatCard
-            icon={<Folder size={24} />}
-            label="Total Programmes"
-            value={globalStats.total_programs}
-            bgColor="bg-purple-500"
-          />
-          <StatCard
-            icon={<CheckCircle size={24} />}
-            label="Programmes Actifs"
-            value={globalStats.active_programs}
-            bgColor="bg-green-500"
-          />
-          <StatCard
-            icon={<DollarSign size={24} />}
-            label="Budget Total"
-            value={formatCurrency(globalStats.total_budget).replace('XAF', 'Mds FCFA').replace(/\s/g, '')}
-            bgColor="bg-blue-500"
-          />
-          <StatCard
-            icon={<TrendingUp size={24} />}
-            label="Budget Utilisé"
-            value={`${calculateBudgetPercentage(globalStats.budget_spent, globalStats.total_budget)}%`}
-            bgColor="bg-orange-500"
-          />
-          <StatCard
-            icon={<Users size={24} />}
-            label="Bénéficiaires"
-            value={globalStats.total_beneficiaries.toLocaleString()}
-            bgColor="bg-indigo-500"
-          />
-        </div>
       </div>
 
-      {/* Filtres */}
+      {/* Filtres et recherche */}
       <div className="bg-white rounded-lg shadow-md p-4">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Filter size={20} className="text-gray-500" />
-            <span className="font-semibold text-gray-700">Filtres:</span>
-          </div>
-          
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          >
-            <option value="ALL">Tous les statuts</option>
-            <option value="ACTIVE">Actif</option>
-            <option value="PAUSED">Suspendu</option>
-            <option value="DRAFT">Brouillon</option>
-            <option value="CLOSED">Clôturé</option>
-          </select>
-
-          <input
-            type="text"
-            placeholder="Rechercher un programme..."
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            className="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      {/* Liste des programmes */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement des programmes...</p>
-        </div>
-      ) : filteredPrograms.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-md p-12 text-center">
-          <AlertCircle size={64} className="text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-800 mb-2">Aucun programme trouvé</h3>
-          <p className="text-gray-600">Essayez de modifier vos filtres ou créez un nouveau programme</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {filteredPrograms.map(program => (
-            <ProgramCard
-              key={program.id}
-              program={program}
-              onView={() => {
-                setSelectedProgram(program);
-                setView('details');
-              }}
-              formatCurrency={formatCurrency}
-              getStatusBadge={getStatusBadge}
-              calculateBudgetPercentage={calculateBudgetPercentage}
-              calculateCapacityPercentage={calculateCapacityPercentage}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ================================================================================
-// COMPOSANTS ENFANTS
-// ================================================================================
-
-function StatCard({ icon, label, value, bgColor }) {
-  return (
-    <div className={`${bgColor} rounded-lg p-4 text-white`}>
-      <div className="flex items-center justify-between mb-2">
-        {icon}
-      </div>
-      <div className="text-2xl font-bold mb-1">{value}</div>
-      <div className="text-sm opacity-90">{label}</div>
-    </div>
-  );
-}
-
-function ProgramCard({ program, onView, formatCurrency, getStatusBadge, calculateBudgetPercentage, calculateCapacityPercentage }) {
-  const budgetPct = calculateBudgetPercentage(program.budget_spent, program.total_budget);
-  const capacityPct = calculateCapacityPercentage(program.current_beneficiaries, program.max_beneficiaries);
-
-  return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-3xl">{program.category.icon}</span>
-            <div>
-              <h3 className="text-xl font-bold text-gray-800">{program.name}</h3>
-              <p className="text-sm text-gray-600">{program.code} • {program.category.name}</p>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Recherche */}
+          <div className="md:col-span-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Rechercher par nom ou code..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {getStatusBadge(program.status)}
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        {/* Budget */}
-        <div className="bg-blue-50 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign size={18} className="text-blue-600" />
-            <span className="text-sm font-semibold text-blue-900">Budget</span>
+          {/* Filtre statut */}
+          <div>
+            <select
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="ACTIVE">Actif</option>
+              <option value="DRAFT">Brouillon</option>
+              <option value="PAUSED">Suspendu</option>
+              <option value="CLOSED">Clôturé</option>
+            </select>
           </div>
-          <div className="text-2xl font-bold text-blue-900 mb-1">
-            {formatCurrency(program.budget_remaining)}
-          </div>
-          <div className="w-full bg-blue-200 rounded-full h-2 mb-2">
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all"
-              style={{ width: `${budgetPct}%` }}
-            />
-          </div>
-          <div className="text-xs text-blue-700">
-            {budgetPct}% utilisé • {formatCurrency(program.benefit_amount)}/{program.frequency === 'MONTHLY' ? 'mois' : 'ponctuel'}
-          </div>
-        </div>
 
-        {/* Bénéficiaires */}
-        <div className="bg-green-50 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Users size={18} className="text-green-600" />
-            <span className="text-sm font-semibold text-green-900">Bénéficiaires</span>
-          </div>
-          <div className="text-2xl font-bold text-green-900 mb-1">
-            {program.current_beneficiaries} / {program.max_beneficiaries}
-          </div>
-          <div className="w-full bg-green-200 rounded-full h-2 mb-2">
-            <div
-              className="bg-green-600 h-2 rounded-full transition-all"
-              style={{ width: `${capacityPct}%` }}
-            />
-          </div>
-          <div className="text-xs text-green-700">
-            {capacityPct}% capacité • {program.max_beneficiaries - program.current_beneficiaries} places disponibles
+          {/* Tri */}
+          <div>
+            <select
+              value={filters.ordering}
+              onChange={(e) => handleFilterChange('ordering', e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="-created_at">Plus récent</option>
+              <option value="created_at">Plus ancien</option>
+              <option value="name">Nom (A-Z)</option>
+              <option value="-name">Nom (Z-A)</option>
+              <option value="-total_budget">Budget (décroissant)</option>
+              <option value="total_budget">Budget (croissant)</option>
+            </select>
           </div>
         </div>
 
-        {/* Dates */}
-        <div className="bg-purple-50 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Calendar size={18} className="text-purple-600" />
-            <span className="text-sm font-semibold text-purple-900">Période</span>
-          </div>
-          <div className="text-sm text-purple-900 mb-1">
-            <strong>Début:</strong> {new Date(program.start_date).toLocaleDateString('fr-FR')}
-          </div>
-          <div className="text-sm text-purple-900">
-            <strong>Fin:</strong> {program.end_date ? new Date(program.end_date).toLocaleDateString('fr-FR') : 'Indéterminée'}
-          </div>
-          <div className="text-xs text-purple-700 mt-2">
-            Géré par: {program.managed_by_name}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <span className="flex items-center gap-1">
-            <Users size={14} />
-            {program.enrollments_count} inscriptions
-          </span>
-          <span className="flex items-center gap-1">
-            <CheckCircle size={14} />
-            {program.active_enrollments_count} actives
-          </span>
-        </div>
-        
-        <div className="flex gap-2">
+        {/* Bascule vue */}
+        <div className="flex justify-end mt-4 gap-2">
           <button
-            onClick={onView}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-lg transition-colors ${
+              viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
           >
-            <Eye size={16} />
-            Détails
+            <Grid size={20} />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-lg transition-colors ${
+              viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <List size={20} />
           </button>
         </div>
       </div>
-    </div>
-  );
-}
 
-function ProgramDetails({ program, onBack }) {
-  return (
-    <div className="space-y-6">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-purple-600 hover:text-purple-700 font-semibold"
-      >
-        ← Retour à la liste
-      </button>
+      {/* Liste programmes */}
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Chargement des programmes...</p>
+          </div>
+        </div>
+      ) : programs.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-md p-12 text-center">
+          <Filter className="mx-auto text-gray-400 mb-4" size={48} />
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">Aucun programme trouvé</h3>
+          <p className="text-gray-500">Essayez de modifier vos filtres ou créez un nouveau programme</p>
+        </div>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {programs.map((program) => (
+            <div
+              key={program.id}
+              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group"
+            >
+              {/* En-tête card */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 text-white">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg mb-1 line-clamp-2">{program.name}</h3>
+                    <p className="text-blue-100 text-sm font-mono">{program.code}</p>
+                  </div>
+                  {getStatusBadge(program.status)}
+                </div>
+              </div>
 
-      <div className="bg-white rounded-lg shadow-lg p-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-6">{program.name}</h2>
-        <p className="text-gray-600 mb-4">Détails complets du programme à implémenter...</p>
-        {/* TODO: Ajouter graphiques, historique paiements, liste bénéficiaires */}
-      </div>
-    </div>
-  );
-}
+              {/* Corps card */}
+              <div className="p-4 space-y-4">
+                {/* Budget */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600 flex items-center gap-1">
+                      <DollarSign size={16} />
+                      Budget
+                    </span>
+                    <span className="text-xs font-medium text-gray-500">
+                      {((program.budget_spent / program.total_budget) * 100).toFixed(0)}% utilisé
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-lg font-bold text-gray-800">
+                      {formatCurrency(program.total_budget)}
+                    </p>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all"
+                        style={{ width: `${Math.min((program.budget_spent / program.total_budget) * 100, 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Utilisé: {formatCurrency(program.budget_spent)}</span>
+                      <span>Reste: {formatCurrency(program.budget_remaining)}</span>
+                    </div>
+                  </div>
+                </div>
 
-function ProgramForm({ onBack, onSuccess }) {
-  return (
-    <div className="space-y-6">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-purple-600 hover:text-purple-700 font-semibold"
-      >
-        ← Retour à la liste
-      </button>
+                {/* Statistiques */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-purple-50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Users size={16} className="text-purple-600" />
+                      <span className="text-xs text-purple-600 font-medium">Bénéficiaires</span>
+                    </div>
+                    <p className="text-xl font-bold text-purple-800">
+                      {program.current_beneficiaries}
+                    </p>
+                    {program.max_beneficiaries && (
+                      <p className="text-xs text-purple-600">
+                        / {program.max_beneficiaries} max
+                      </p>
+                    )}
+                  </div>
 
-      <div className="bg-white rounded-lg shadow-lg p-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-6">Nouveau Programme</h2>
-        <p className="text-gray-600 mb-4">Formulaire de création à implémenter...</p>
-        {/* TODO: Formulaire complet avec validation */}
+                  <div className="bg-green-50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp size={16} className="text-green-600" />
+                      <span className="text-xs text-green-600 font-medium">Montant</span>
+                    </div>
+                    <p className="text-xl font-bold text-green-800">
+                      {formatCurrency(program.benefit_amount)}
+                    </p>
+                    <p className="text-xs text-green-600">
+                      {program.frequency === 'MONTHLY' ? '/mois' :
+                       program.frequency === 'QUARTERLY' ? '/trimestre' :
+                       program.frequency === 'ANNUAL' ? '/an' : 'unique'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Dates */}
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Calendar size={16} />
+                  <span>
+                    Du {formatDate(program.start_date)}
+                    {program.end_date && ` au ${formatDate(program.end_date)}`}
+                  </span>
+                </div>
+
+                {/* Actions */}
+                <button
+                  onClick={() => handleViewProgram(program.id)}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 transition-colors group-hover:bg-blue-700"
+                >
+                  <Eye size={18} />
+                  Voir les détails
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* Vue liste */
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Programme
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Statut
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Budget
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Bénéficiaires
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Dates
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {programs.map((program) => (
+                <tr key={program.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{program.name}</div>
+                      <div className="text-sm text-gray-500 font-mono">{program.code}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getStatusBadge(program.status)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {formatCurrency(program.total_budget)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {((program.budget_spent / program.total_budget) * 100).toFixed(0)}% utilisé
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {program.current_beneficiaries}
+                      {program.max_beneficiaries && ` / ${program.max_beneficiaries}`}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {formatDate(program.start_date)}
+                    </div>
+                    {program.end_date && (
+                      <div className="text-sm text-gray-500">
+                        → {formatDate(program.end_date)}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => handleViewProgram(program.id)}
+                      className="text-blue-600 hover:text-blue-900 flex items-center gap-1 ml-auto"
+                    >
+                      <Eye size={16} />
+                      Détails
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Information API */}
+      <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded text-sm">
+        <p className="font-semibold text-blue-800 mb-2">📡 Source de données:</p>
+        <p className="text-blue-700">
+          ✅ GET /api/v1/programs/programs/ 
+          {filters.status && ` (filtre: ${filters.status})`}
+          {filters.search && ` (recherche: "${filters.search}")`}
+        </p>
+        <p className="text-blue-600 text-xs mt-1">
+          {programs.length} programme{programs.length > 1 ? 's' : ''} chargé{programs.length > 1 ? 's' : ''}
+        </p>
       </div>
     </div>
   );

@@ -1,81 +1,99 @@
 /**
- * RSU Gabon - API Client
- * Avec gestion JWT automatique
+ * 🇬🇦 RSU Gabon - API Client FIX DÉFINITIF
+ * Standards Top 1% - Client HTTP avec JWT
+ * Fichier: rsu_admin_dashboard/src/services/api/apiClient.js
  */
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-
 class APIClient {
-  async request(method, url, data = null, params = null) {
-    if (!url) {
-      throw new Error('URL endpoint is required');
-    }
+  constructor() {
+    // ✅ FIX DÉFINITIF: URL hardcodée avec /api/v1
+    this.baseURL = 'http://localhost:8000/api/v1';
+  }
 
-    let fullUrl = `${API_BASE_URL}${url}`;
+  /**
+   * Récupérer user actuel depuis localStorage
+   */
+  getCurrentUser() {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  }
 
-    // Ajouter query params si présents
-    if (params) {
-      const queryString = new URLSearchParams(params).toString();
-      fullUrl += `?${queryString}`;
-    }
-
+  /**
+   * Requête HTTP générique
+   */
+  async request(endpoint, options = {}) {
     const token = localStorage.getItem('access_token');
     
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
     const config = {
-      method,
-      headers,
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...options.headers,
+      },
     };
 
-    if (data && method !== 'GET') {
-      config.body = JSON.stringify(data);
+    const url = `${this.baseURL}${endpoint}`;
+    console.log(`🌐 ${options.method || 'GET'} ${url}`);
+
+    const response = await fetch(url, config);
+
+    if (!response.ok) {
+      console.error(`❌ API Error: ${response.status} ${response.statusText}`);
+      throw new Error(`HTTP ${response.status}`);
     }
 
-    console.log(`🌐 ${method} ${fullUrl}`);
-
-    try {
-      const response = await fetch(fullUrl, config);
-      
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || `HTTP ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('API Error:', error);
-      throw error;
-    }
+    const data = await response.json();
+    return data;
   }
 
-  async get(url, params) {
-    return this.request('GET', url, null, params);
+  /**
+   * GET request
+   */
+  async get(endpoint, params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    const fullEndpoint = queryString ? `${endpoint}?${queryString}` : endpoint;
+    return this.request(fullEndpoint, { method: 'GET' });
   }
 
-  async post(url, data) {
-    return this.request('POST', url, data);
+  /**
+   * POST request
+   */
+  async post(endpoint, body = {}) {
+    return this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
   }
 
-  async put(url, data) {
-    return this.request('PUT', url, data);
+  /**
+   * PATCH request
+   */
+  async patch(endpoint, body = {}) {
+    return this.request(endpoint, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
   }
 
-  async delete(url) {
-    return this.request('DELETE', url);
+  /**
+   * PUT request
+   */
+  async put(endpoint, body = {}) {
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
   }
 
-  getCurrentUser() {
-    const user = localStorage.getItem('current_user');
-    return user ? JSON.parse(user) : null;
+  /**
+   * DELETE request
+   */
+  async delete(endpoint) {
+    return this.request(endpoint, { method: 'DELETE' });
   }
 }
 
+// Export instance singleton
 const apiClient = new APIClient();
 export default apiClient;

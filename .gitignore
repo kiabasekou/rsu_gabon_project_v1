@@ -1,95 +1,391 @@
-# RSU Gabon - Fichiers à ignorer
+# ============================================
+# 🇬🇦 RSU GABON - .gitignore Complet
+# Standards Top 1% - Multi-environnements
+# ============================================
 
-### Backend Django ###
-rsu_identity_backend/__pycache__/
-rsu_identity_backend/**/__pycache__/
-rsu_identity_backend/**/*.pyc
-rsu_identity_backend/**/*.pyo
-rsu_identity_backend/**/*.so
-rsu_identity_backend/.Python
-rsu_identity_backend/**/*.egg-info/
-rsu_identity_backend/venv/
-rsu_identity_backend/env/
-rsu_identity_backend/ENV/
+# ============================================
+# BACKEND DJANGO
+# ============================================
 
-# Base de données développement
-rsu_identity_backend/db.sqlite3
-rsu_identity_backend/db.sqlite3-journal
-rsu_identity_backend/*.db
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media
+/static
+/staticfiles
+
+# Django migrations (garder les fichiers, ignorer certains)
+# Décommenter si besoin d'ignorer migrations spécifiques
+# **/migrations/*
+# !**/migrations/__init__.py
+
+# Django secret keys et configs sensibles
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# Spyder
+.spyderproject
+.spyproject
+
+# Rope
+.ropeproject
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+.idea_modules/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# ============================================
+# FRONTEND REACT
+# ============================================
+
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Production builds
+/build
+/dist
+
+# React misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Logs
-rsu_identity_backend/logs/
-rsu_identity_backend/**/*.log
-rsu_identity_backend/**/*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
-# Tests
-rsu_identity_backend/.pytest_cache/
-rsu_identity_backend/htmlcov/
-rsu_identity_backend/.coverage
-rsu_identity_backend/test_results.log
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Fichiers temporaires
-rsu_identity_backend/run_test.sh
-rsu_identity_backend/.env
-rsu_identity_backend/.env.*
+# Optional npm cache directory
+.npm
 
-# Migrations (optionnel - décommenter si nécessaire)
-# rsu_identity_backend/apps/**/migrations/
+# Optional eslint cache
+.eslintcache
 
-### Frontend Dashboard ###
-rsu_admin_dashboard/node_modules/
-rsu_admin_dashboard/build/
-rsu_admin_dashboard/dist/
-rsu_admin_dashboard/.cache/
-rsu_admin_dashboard/coverage/
+# Optional stylelint cache
+.stylelintcache
 
-# Logs npm
-rsu_admin_dashboard/npm-debug.log*
-rsu_admin_dashboard/yarn-debug.log*
-rsu_admin_dashboard/yarn-error.log*
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
 
-# Environnement
-rsu_admin_dashboard/.env
-rsu_admin_dashboard/.env.local
-rsu_admin_dashboard/.env.development.local
-rsu_admin_dashboard/.env.test.local
-rsu_admin_dashboard/.env.production.local
+# Optional REPL history
+.node_repl_history
 
-# Lock files (garder package-lock.json)
-rsu_admin_dashboard/yarn.lock
+# Output of 'npm pack'
+*.tgz
 
-### Mobile App ###
-rsu-mobile-surveyor/node_modules/
-rsu-mobile-surveyor/.expo/
-rsu-mobile-surveyor/dist/
-rsu-mobile-surveyor/web-build/
+# Yarn
+.yarn-integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
 
-### IDE & Éditeurs ###
-.vscode/
-.idea/
+# ============================================
+# MOBILE REACT NATIVE (si applicable)
+# ============================================
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# Metro
+.metro-health-check*
+
+# ============================================
+# BASES DE DONNÉES
+# ============================================
+
+# SQLite
+*.sqlite
+*.sqlite3
+*.db
+
+# PostgreSQL
+*.pgsql
+*.sql
+
+# MySQL
+*.mysql
+
+# ============================================
+# SECRETS & CREDENTIALS
+# ============================================
+
+# Clés API et secrets
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Configuration sensible
+config/secrets.yml
+config/database.yml
+.env.*
+!.env.example
+
+# Tokens et credentials
+*.token
+credentials.json
+service-account.json
+
+# ============================================
+# FICHIERS SYSTÈME
+# ============================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================
+# DOCUMENTATION & RAPPORTS
+# ============================================
+
+# Documentation générée
+docs/_build/
+docs/.doctrees/
+site/
+
+# Rapports
+reports/
+*.report
+*.xlsx
+*.xls
+*.csv
+!**/sample_data/*.csv
+
+# ============================================
+# TESTS & CI/CD
+# ============================================
+
+# Test output
+test-results/
+test-reports/
+*.test.log
+
+# CI/CD
+.github/workflows/*.local.yml
+
+# ============================================
+# BACKUP & TEMPORARY
+# ============================================
+
+# Backups
+*.bak
+*.backup
+*.old
+*.orig
 *.swp
 *.swo
-*.sublime-workspace
-*.sublime-project
+*~
 
-### OS ###
-.DS_Store
-Thumbs.db
-desktop.ini
+# Temporary
+tmp/
+temp/
+*.tmp
+*.temp
 
-### Documentation redondante ###
-docs/tests/
-docs/technical/CORRECTIONS_IMPORTS_CRITIQUES.md
+# Logs
+logs/
+*.log
 
-### Certificats & Secrets ###
-*.key
-*.pem
-*.crt
-*.csr
+# ============================================
+# MEDIA & UPLOADS
+# ============================================
+
+# User uploads (développement)
+media/uploads/
+media/temp/
+
+# Images temporaires
+*.orig.jpg
+*.orig.png
+
+# ============================================
+# SPÉCIFIQUE RSU GABON
+# ============================================
+
+# Données de test sensibles
+**/test_data_sensitive/
+**/fixtures_prod/
+
+# Scripts de migration one-time
+**/migrations_backup/
+
+# Documentation interne confidentielle
+docs/internal/
+docs/confidential/
+
+# Certificats SSL locaux
 certificates/
-secrets/
 
-### Données sensibles ###
-data/backups/
-data/personal-data/
-compliance/sensitive/
+# Dumps base de données
+*.dump
+*.sql.gz
+*.psql.gz
+
+# ============================================
+# KEEP THESE (Exceptions)
+# ============================================
+
+# Garder certains fichiers importants
+!.gitkeep
+!.env.example
+!.env.template
+!README.md
+!LICENSE
+!.github/workflows/
+
+# Garder fixtures de démo
+!**/fixtures/demo_*.json
+
+# Garder migrations initiales
+!**/migrations/0001_initial.py
+!**/migrations/__init__

@@ -1,74 +1,79 @@
 /**
- * 🇬🇦 RSU Gabon - Programs Hook
- * Hook pour gestion des programmes sociaux
+ * 🇬🇦 RSU Gabon - usePrograms Hook
+ * Standards Top 1% - Gestion état programmes
+ * Fichier: rsu_admin_dashboard/src/hooks/usePrograms.js
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import programsAPI from '../services/api/programsAPI';
+import { useState, useCallback, useEffect } from 'react';
+import { programsAPI } from '../services/api/programsAPI';
 
-export function usePrograms(options = {}) {
-  const { autoLoad = true, initialFilters = {} } = options;
-
+export function usePrograms() {
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 10,
-    total: 0
+  const [filters, setFilters] = useState({
+    status: '',
+    search: '',
+    ordering: '-created_at'
   });
 
-  const filtersRef = useRef(initialFilters);
-
-  const loadPrograms = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
+  const loadPrograms = useCallback(async (customFilters = null) => {
     try {
-      const response = await programsAPI.getPrograms({
-        page: pagination.page,
-        page_size: pagination.pageSize,
-        ...filtersRef.current
-      });
-
-      setPrograms(response.results || []);
-      setPagination(prev => ({
-        ...prev,
-        total: response.count || 0
-      }));
-
-      console.log('✅ Programs loaded:', response.results?.length);
+      setLoading(true);
+      setError(null);
+      
+      const filterParams = customFilters || filters;
+      console.log('📥 Loading programs with filters:', filterParams);
+      
+      const data = await programsAPI.getPrograms(filterParams);
+      
+      // ✅ FIX: API retourne {count, results} avec pagination
+      const programsList = data.results || [];
+      
+      setPrograms(programsList);
+      console.log(`✅ Programs loaded: ${programsList.length}`);
     } catch (err) {
-      console.error('❌ Programs error:', err);
       setError(err.message);
+      console.error('❌ Programs error:', err);
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize]);
+  }, [filters]);
 
-  useEffect(() => {
-    if (autoLoad) {
-      loadPrograms();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const setFilters = useCallback((newFilters) => {
-    filtersRef.current = { ...filtersRef.current, ...newFilters };
-    setPagination(prev => ({ ...prev, page: 1 }));
+  const refreshPrograms = useCallback(() => {
     loadPrograms();
   }, [loadPrograms]);
 
-  const refresh = useCallback(() => {
-    return loadPrograms();
-  }, [loadPrograms]);
+  const updateFilters = useCallback((newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  }, []);
+
+  // Charger programmes au montage et quand filtres changent
+  useEffect(() => {
+    // ✅ FIX: Éviter double appel en React 18 Strict Mode
+    let isMounted = true;
+    
+    const fetchPrograms = async () => {
+      if (isMounted) {
+        await loadPrograms();
+      }
+    };
+    
+    fetchPrograms();
+    
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.status, filters.search, filters.ordering]);
 
   return {
     programs,
     loading,
     error,
-    pagination,
-    setFilters,
-    refresh
+    filters,
+    updateFilters,
+    loadPrograms,
+    refreshPrograms
   };
 }
