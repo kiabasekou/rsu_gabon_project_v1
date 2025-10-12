@@ -12,7 +12,10 @@ from apps.services_app.models import (
     VulnerabilityAssessment,
     ProgramBudgetChange
 )
-from apps.identity_app.serializers import PersonIdentityMinimalSerializer
+from apps.identity_app.serializers import (
+    PersonIdentityMinimalSerializer,
+    PersonIdentitySerializer  # Utilisé ligne 132
+)
 from apps.core_app.serializers import RSUUserMinimalSerializer
 
 
