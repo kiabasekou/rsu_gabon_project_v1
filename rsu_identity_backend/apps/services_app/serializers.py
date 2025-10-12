@@ -1,16 +1,24 @@
-# ===================================================================
-# RSU GABON - SERIALIZERS SERVICES APP
-# Sérialisation données programmes sociaux
-# ===================================================================
+"""
+🇬🇦 RSU Gabon - Services App Serializers COMPLET
+Version fusionnée : Ancien + Nouveau
+Standards Top 1% - Tous les serializers nécessaires
+Fichier: rsu_identity_backend/apps/services_app/serializers.py
+"""
 
 from rest_framework import serializers
-from .models import (
+from apps.services_app.models import (
     SocialProgram, 
     SocialProgramEligibility, 
     VulnerabilityAssessment,
     ProgramBudgetChange
 )
+from apps.identity_app.serializers import PersonIdentityMinimalSerializer
+from apps.core_app.serializers import RSUUserMinimalSerializer
 
+
+# ============================================================================
+# SOCIAL PROGRAMS SERIALIZERS (EXISTANT - CONSERVÉ)
+# ============================================================================
 
 class SocialProgramSerializer(serializers.ModelSerializer):
     """
@@ -74,58 +82,6 @@ class SocialProgramSerializer(serializers.ModelSerializer):
         return data
 
 
-class SocialProgramEligibilitySerializer(serializers.ModelSerializer):
-    """
-    Serializer pour éligibilité programmes
-    """
-    
-    person_name = serializers.CharField(source='person.full_name', read_only=True)
-    person_rsu_id = serializers.CharField(source='person.rsu_id', read_only=True)
-    
-    class Meta:
-        model = SocialProgramEligibility
-        fields = [
-            'id', 'person', 'person_name', 'person_rsu_id', 'program_code',
-            'eligibility_score', 'recommendation_level', 'processing_priority',
-            'eligibility_factors', 'blocking_factors',
-            'estimated_monthly_benefit', 'estimated_impact', 'intervention_urgency',
-            'assessment_date', 'assessment_notes', 'is_active'
-        ]
-        read_only_fields = [
-            'id', 'person_name', 'person_rsu_id', 'assessment_date'
-        ]
-
-
-class VulnerabilityAssessmentSerializer(serializers.ModelSerializer):
-    """
-    Serializer pour évaluations vulnérabilité
-    """
-    
-    person_name = serializers.CharField(source='person.full_name', read_only=True)
-    person_rsu_id = serializers.CharField(source='person.rsu_id', read_only=True)
-    
-    class Meta:
-        model = VulnerabilityAssessment
-        fields = [
-            'id', 'person', 'person_name', 'person_rsu_id',
-            'vulnerability_score', 'risk_level',
-            'household_composition_score', 'economic_vulnerability_score',
-            'social_vulnerability_score',
-            'vulnerability_factors', 'risk_factors', 'protective_factors',
-            'recommendations', 'priority_interventions',
-            'assessment_date', 'assessment_notes', 'is_active'
-        ]
-        read_only_fields = [
-            'id', 'person_name', 'person_rsu_id', 'assessment_date'
-        ]
-    
-    def validate_vulnerability_score(self, value):
-        """Validation score vulnérabilité"""
-        if not 0 <= value <= 100:
-            raise serializers.ValidationError("Le score de vulnérabilité doit être entre 0 et 100")
-        return value
-
-
 class ProgramBudgetChangeSerializer(serializers.ModelSerializer):
     """
     Serializer pour historique modifications budgétaires
@@ -156,9 +112,152 @@ class ProgramBudgetChangeSerializer(serializers.ModelSerializer):
         return value
 
 
-# ===================================================================
-# SERIALIZERS STATISTIQUES ET RAPPORTS
-# ===================================================================
+# ============================================================================
+# ELIGIBILITY SERIALIZERS (FUSIONNÉ - VERSION ENRICHIE)
+# ============================================================================
+
+class SocialProgramEligibilitySerializer(serializers.ModelSerializer):
+    """
+    Serializer pour éligibilité programmes sociaux
+    ✅ VERSION ENRICHIE avec détails person et assessed_by
+    """
+    
+    # Relations enrichies
+    person_details = PersonIdentityMinimalSerializer(source='person', read_only=True)
+    assessed_by_details = RSUUserMinimalSerializer(source='assessed_by', read_only=True)
+    
+    # Champs calculés (ancien)
+    person_name = serializers.CharField(source='person.full_name', read_only=True)
+    person_rsu_id = serializers.CharField(source='person.rsu_id', read_only=True)
+    
+    # Champs display
+    eligibility_status_display = serializers.CharField(
+        source='get_eligibility_status_display', 
+        read_only=True
+    )
+    
+    class Meta:
+        model = SocialProgramEligibility
+        fields = [
+            'id',
+            # Person info
+            'person', 'person_details', 'person_name', 'person_rsu_id',
+            
+            # Program info
+            'program_name', 'program_category',
+            
+            # Eligibility
+            'eligibility_status', 'eligibility_status_display',
+            'eligibility_score', 'matching_criteria', 'missing_criteria',
+            'priority_ranking', 'recommendation_notes',
+            
+            # Assessment
+            'assessment_date', 'assessed_by', 'assessed_by_details',
+            
+            # Timestamps
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+# ============================================================================
+# VULNERABILITY SERIALIZERS (FUSIONNÉ - VERSION ENRICHIE + CRÉATION)
+# ============================================================================
+
+class VulnerabilityAssessmentSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour VulnerabilityAssessment
+    ✅ VERSION ENRICHIE avec relations et tous les champs
+    """
+    
+    # Relations enrichies
+    person_details = PersonIdentityMinimalSerializer(source='person', read_only=True)
+    assessed_by_details = RSUUserMinimalSerializer(source='assessed_by', read_only=True)
+    
+    # Champs calculés (ancien)
+    person_name = serializers.CharField(source='person.full_name', read_only=True)
+    person_rsu_id = serializers.CharField(source='person.rsu_id', read_only=True)
+    
+    # Champs display
+    risk_level_display = serializers.CharField(source='get_risk_level_display', read_only=True)
+    
+    class Meta:
+        model = VulnerabilityAssessment
+        fields = [
+            'id',
+            # Person info
+            'person', 'person_details', 'person_name', 'person_rsu_id',
+            
+            # Scores
+            'vulnerability_score', 'risk_level', 'risk_level_display',
+            'health_vulnerability_score',
+            'household_composition_score',
+            'economic_vulnerability_score',
+            'social_vulnerability_score',
+            
+            # Factors
+            'vulnerability_factors', 'risk_factors', 'protective_factors',
+            
+            # Recommendations
+            'recommendations', 'priority_interventions',
+            
+            # Assessment info
+            'assessment_date', 'assessed_by', 'assessed_by_details',
+            'assessment_notes',
+            
+            # Status
+            'is_active',
+            
+            # Timestamps
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def validate_vulnerability_score(self, value):
+        """Validation score vulnérabilité"""
+        if value < 0 or value > 100:
+            raise serializers.ValidationError(
+                "Le score de vulnérabilité doit être entre 0 et 100"
+            )
+        return value
+
+
+class VulnerabilityAssessmentCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour création manuelle d'évaluation vulnérabilité
+    ✅ NOUVEAU - Pour création via API
+    """
+    
+    class Meta:
+        model = VulnerabilityAssessment
+        fields = [
+            'person',
+            'vulnerability_score',
+            'risk_level',
+            'health_vulnerability_score',
+            'household_composition_score',
+            'economic_vulnerability_score',
+            'social_vulnerability_score',
+            'vulnerability_factors',
+            'risk_factors',
+            'protective_factors',
+            'recommendations',
+            'priority_interventions',
+            'assessment_notes'
+        ]
+    
+    def validate_vulnerability_score(self, value):
+        """Valider score entre 0 et 100"""
+        if value < 0 or value > 100:
+            raise serializers.ValidationError(
+                "Le score de vulnérabilité doit être entre 0 et 100"
+            )
+        return value
+
+
+# ============================================================================
+# STATISTICS & REPORTS SERIALIZERS (EXISTANT - CONSERVÉ)
+# ============================================================================
 
 class ProgramStatisticsSerializer(serializers.Serializer):
     """
@@ -189,3 +288,25 @@ class BudgetDashboardSerializer(serializers.Serializer):
     
     class Meta:
         fields = ['overview', 'risk_analysis']
+
+
+# ============================================================================
+# EXPORTS
+# ============================================================================
+
+__all__ = [
+    # Programs
+    'SocialProgramSerializer',
+    'ProgramBudgetChangeSerializer',
+    
+    # Eligibility
+    'SocialProgramEligibilitySerializer',
+    
+    # Vulnerability
+    'VulnerabilityAssessmentSerializer',
+    'VulnerabilityAssessmentCreateSerializer',
+    
+    # Statistics
+    'ProgramStatisticsSerializer',
+    'BudgetDashboardSerializer',
+]
