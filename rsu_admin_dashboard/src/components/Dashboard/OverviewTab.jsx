@@ -3,48 +3,41 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
-import { Users, Home, CheckCircle, AlertCircle, Globe, Calendar, Activity, Shield } from 'lucide-react';
-import StatCard from './StatCard';
+import { Users, Home, CheckCircle, AlertCircle, Globe, Calendar, Activity, Shield, RefreshCw } from 'lucide-react'; 
+import StatCard from './StatCard'; 
 
-export default function OverviewTab({ data, loading = false, error = null }) {
+export default function OverviewTab({ data, loading = false, error = null, onRefresh }) {
   
-  // ✅ LOGGING POUR DEBUG
+  // LOGGING POUR DEBUG
   console.log('📊 OverviewTab received data:', data);
-  console.log('📊 OverviewTab loading:', loading);
-  console.log('📊 OverviewTab error:', error);
+  console.log('📊 Province data:', data?.province_distribution);
 
-  // ✅ AFFICHER ERREUR SI PRÉSENTE
+  // AFFICHER ERREUR
   if (error) {
+    const errorMessage = typeof error === 'object' && error !== null ? error.message || JSON.stringify(error) : error;
+    
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
         <AlertCircle className="text-red-600 mx-auto mb-4" size={48} />
         <h3 className="text-lg font-bold text-red-800 mb-2">Erreur de chargement</h3>
-        <p className="text-red-600">{error}</p>
+        <p className="text-red-600">{errorMessage}</p>
+        <button 
+          onClick={onRefresh}
+          className="mt-4 px-4 py-2 text-sm bg-gray-200 rounded hover:bg-gray-300 flex items-center mx-auto"
+        >
+          <RefreshCw size={16} className="mr-2" /> Réessayer
+        </button>
       </div>
     );
   }
 
-  // ✅ EXTRACTION DONNÉES RÉELLES DE L'API
-  // Structure attendue de l'API Django: /api/v1/analytics/dashboard/
-  const stats = {
-    total_beneficiaries: data?.total_persons || data?.stats?.total_beneficiaries || 0,
-    total_households: data?.total_households || data?.stats?.total_households || 0,
-    active_programs: data?.active_programs || data?.stats?.active_programs || 0,
-    avg_vulnerability_score: data?.avg_vulnerability_score || data?.stats?.avg_vulnerability_score || 0,
-    beneficiaries_growth: data?.beneficiaries_growth || '+0%',
-    households_growth: data?.households_growth || '+0%',
-  };
+  // EXTRACTION DONNÉES - Structure API Django exacte
+  const stats = data?.stats || {};
+  const provinceData = data?.province_distribution || [];
+  const monthlyData = data?.monthly_enrollments || [];
+  const vulnerabilityData = data?.vulnerability_distribution || [];
 
-  // ✅ DONNÉES GÉOGRAPHIQUES DEPUIS API
-  const provinceData = data?.province_distribution || data?.by_province || [];
-
-  // ✅ DONNÉES MENSUELLES DEPUIS API
-  const monthlyData = data?.monthly_enrollments || data?.monthly_stats || [];
-
-  // ✅ DONNÉES VULNÉRABILITÉ DEPUIS API
-  const vulnerabilityData = data?.vulnerability_distribution || data?.vulnerability_stats || [];
-
-  // ✅ AFFICHER SPINNER PENDANT CHARGEMENT
+  // AFFICHER SPINNER PENDANT CHARGEMENT
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -56,7 +49,7 @@ export default function OverviewTab({ data, loading = false, error = null }) {
     );
   }
 
-  // ✅ AFFICHER MESSAGE SI AUCUNE DONNÉE
+  // AFFICHER MESSAGE SI AUCUNE DONNÉE
   if (!data || Object.keys(data).length === 0) {
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
@@ -73,44 +66,44 @@ export default function OverviewTab({ data, loading = false, error = null }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Bénéficiaires Totaux"
-          value={stats.total_beneficiaries?.toLocaleString('fr-FR')}
+          value={stats.total_beneficiaries?.toLocaleString('fr-FR') || '0'}
           icon={Users}
-          trend={stats.beneficiaries_growth}
+          trend={stats.beneficiaries_growth || '+0%'}
           color="#3b82f6"
           loading={loading}
         />
         <StatCard
           title="Ménages Enregistrés"
-          value={stats.total_households?.toLocaleString('fr-FR')}
+          value={stats.total_households?.toLocaleString('fr-FR') || '0'}
           icon={Home}
-          trend={stats.households_growth}
+          trend={stats.households_growth || '+0%'}
           color="#8b5cf6"
           loading={loading}
         />
         <StatCard
           title="Programmes Actifs"
-          value={stats.active_programs}
+          value={stats.active_programs || '0'}
           icon={CheckCircle}
           color="#10b981"
           loading={loading}
         />
         <StatCard
           title="Score Vulnérabilité Moyen"
-          value={stats.avg_vulnerability_score?.toFixed(1)}
+          value={stats.avg_vulnerability_score?.toFixed(1) || '0.0'}
           icon={AlertCircle}
           color="#f59e0b"
           loading={loading}
         />
       </div>
 
-      {/* Graphiques - Afficher seulement si données disponibles */}
-      {provinceData.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Distribution géographique */}
+      {/* Graphiques */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Distribution géographique */}
+        {provinceData.length > 0 ? (
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
               <Globe size={20} className="text-blue-600" />
-              Distribution Géographique
+              Distribution Géographique ({provinceData.length} provinces)
             </h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -119,78 +112,111 @@ export default function OverviewTab({ data, loading = false, error = null }) {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percentage }) => `${name} ${percentage?.toFixed(1)}%`}
+                  label={(entry) => {
+                    // L'API retourne déjà 'percentage' OU on le calcule
+                    const pct = entry.percentage || 0;
+                    const name = entry.name || entry.province || 'N/A';
+                    return `${name} ${pct.toFixed(1)}%`;
+                  }}
                   outerRadius={100}
                   fill="#8884d8"
-                  dataKey="count"
+                  dataKey="value"
+                  nameKey="name"
                 >
                   {provinceData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={`hsl(${index * 40}, 70%, 50%)`} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  formatter={(value, name, props) => {
+                    const pct = props.payload.percentage || 0;
+                    return [
+                      `${value.toLocaleString('fr-FR')} personnes (${pct.toFixed(1)}%)`,
+                      props.payload.name || props.payload.province
+                    ];
+                  }}
+                />
               </PieChart>
+            </ResponsiveContainer>
+            <div className="mt-4 text-xs text-gray-500 text-center">
+              📡 Source: GET /analytics/dashboard/ - {provinceData.reduce((sum, p) => sum + (p.value || 0), 0).toLocaleString('fr-FR')} total
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-md p-6 text-center">
+            <Globe size={40} className="text-gray-400 mx-auto mb-2" />
+            <p className="text-gray-600">Aucune donnée géographique disponible</p>
+          </div>
+        )}
+
+        {/* Tendances mensuelles */}
+        {monthlyData.length > 0 ? (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
+              <Calendar size={20} className="text-green-600" />
+              Enrôlements Mensuels
+            </h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis allowDecimals={false} />
+                <Tooltip 
+                   formatter={(value, name) => [value.toLocaleString('fr-FR'), name]}
+                />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="enrollments"  
+                  stroke="#3b82f6" 
+                  strokeWidth={2} 
+                  name="Enrôlements" 
+                />
+              </LineChart>
             </ResponsiveContainer>
             <div className="mt-4 text-xs text-gray-500 text-center">
               📡 Source: GET /analytics/dashboard/
             </div>
           </div>
-
-          {/* Tendances mensuelles */}
-          {monthlyData.length > 0 && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
-                <Calendar size={20} className="text-green-600" />
-                Enrôlements Mensuels
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="enrollments" 
-                    stroke="#3b82f6" 
-                    strokeWidth={2} 
-                    name="Enrôlements" 
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              <div className="mt-4 text-xs text-gray-500 text-center">
-                📡 Source: GET /analytics/dashboard/
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+        ) : (
+          <div className="bg-white rounded-lg shadow-md p-6 text-center">
+            <Calendar size={40} className="text-gray-400 mx-auto mb-2" />
+            <p className="text-gray-600">Aucune donnée mensuelle disponible</p>
+          </div>
+        )}
+      </div>
 
       {/* Distribution vulnérabilité */}
-      {vulnerabilityData.length > 0 && (
+      {vulnerabilityData.length > 0 ? (
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
             <Activity size={20} className="text-orange-600" />
-            Distribution Score Vulnérabilité
+            Distribution Score Vulnérabilité ({vulnerabilityData.reduce((sum, v) => sum + (v.count || 0), 0).toLocaleString('fr-FR')} évaluations)
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={vulnerabilityData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="level" />
-              <YAxis />
-              <Tooltip />
+              <XAxis dataKey="category" />
+              <YAxis allowDecimals={false} />
+              <Tooltip 
+                  formatter={(value, name) => [value.toLocaleString('fr-FR'), name]}
+              />
               <Legend />
               <Bar dataKey="count" name="Nombre de bénéficiaires">
                 {vulnerabilityData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color || '#3b82f6'} />
+                  <Cell key={`cell-${index}`} fill={entry.color || `hsl(${index * 40 + 20}, 70%, 50%)`} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
           <div className="mt-4 text-xs text-gray-500 text-center">
-            📡 Source: GET /services/vulnerability-assessment/statistics/
+            📡 Source: GET /analytics/dashboard/
           </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-md p-6 text-center">
+          <Activity size={40} className="text-gray-400 mx-auto mb-2" />
+          <p className="text-gray-600">Aucune donnée de vulnérabilité disponible</p>
         </div>
       )}
 
@@ -206,7 +232,7 @@ export default function OverviewTab({ data, loading = false, error = null }) {
             <ul className="text-gray-600 text-xs mt-1 space-y-1">
               <li>✅ GET /analytics/dashboard/</li>
               <li>✅ GET /identity/persons/</li>
-              <li>✅ GET /services/vulnerability-assessment/</li>
+              <li>✅ GET /programs/programs/</li>
             </ul>
           </div>
           <div>
@@ -218,22 +244,22 @@ export default function OverviewTab({ data, loading = false, error = null }) {
             </ul>
           </div>
           <div>
-            <p className="text-gray-700 font-medium">Performance:</p>
+            <p className="text-gray-700 font-medium">Statistiques:</p>
             <ul className="text-gray-600 text-xs mt-1 space-y-1">
-              <li>✅ Chargement parallèle</li>
-              <li>✅ Pagination optimisée</li>
-              <li>✅ Cache client-side</li>
+              <li>📊 {(stats.total_beneficiaries || 0).toLocaleString('fr-FR')} bénéficiaires</li>
+              <li>🏠 {(stats.total_households || 0).toLocaleString('fr-FR')} ménages</li>
+              <li>📈 {stats.active_programs || 0} programmes actifs</li>
             </ul>
           </div>
         </div>
       </div>
 
-      {/* DEBUG: Afficher structure données API */}
+      {/* DEBUG: Structure données */}
       <details className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <summary className="cursor-pointer text-sm font-mono text-gray-700">
-          🔍 Debug: Structure données API
+        <summary className="cursor-pointer text-sm font-mono text-gray-700 hover:text-blue-600">
+          🔍 Debug: Structure données API (cliquer pour voir)
         </summary>
-        <pre className="mt-2 text-xs overflow-auto max-h-96 bg-white p-4 rounded border">
+        <pre className="mt-2 text-xs overflow-auto max-h-96 bg-white p-4 rounded border border-gray-300">
           {JSON.stringify(data, null, 2)}
         </pre>
       </details>

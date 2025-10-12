@@ -1,41 +1,42 @@
 /**
- * 🇬🇦 RSU Gabon - usePrograms Hook
- * Standards Top 1% - Gestion état programmes
+ * 🇬🇦 RSU Gabon - usePrograms Hook CORRIGÉ
+ * Standards Top 1% - FIX Boucle Infinie
  * Fichier: rsu_admin_dashboard/src/hooks/usePrograms.js
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import apiClient from '../services/api/apiClient';
-import ENDPOINTS from '../services/api/endpoints';
-
-// ✅ Supprimer l'import programsAPI si utilisation d'apiClient direct
-// OU créer programsAPI.js et importer
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { programsAPI } from '../services/api/programsAPI';
 
-export function usePrograms(filters = {}) {
+export function usePrograms() {
   const [programs, setPrograms] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 50,
-    total: 0,
+  const [filters, setFilters] = useState({
+    status: '',
+    search: '',
+    ordering: '-created_at'
   });
+
+  // ✅ Utiliser useRef pour éviter re-renders
+  const filtersRef = useRef(filters);
+  const hasMounted = useRef(false);
+
+  // ✅ Mettre à jour ref quand filters change
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
 
   const loadPrograms = useCallback(async (customFilters = null) => {
     try {
       setLoading(true);
       setError(null);
       
-      const filterParams = customFilters || filters;
+      const filterParams = customFilters || filtersRef.current;
       console.log('📥 Loading programs with filters:', filterParams);
       
-      // ✅ OPTION A: Utiliser programsAPI
       const data = await programsAPI.getPrograms(filterParams);
       
-      // ✅ OPTION B: Appel direct apiClient
-      // const data = await apiClient.get(ENDPOINTS.PROGRAMS.PROGRAMS, filterParams);
-      
+      // ✅ Gérer structure pagination Django
       const programsList = data.results || [];
       
       setPrograms(programsList);
@@ -46,26 +47,43 @@ export function usePrograms(filters = {}) {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
-  useEffect(() => {
-    loadPrograms();
-  }, [loadPrograms]);
+  }, []); // ✅ Pas de dépendances - fonction stable
 
-  const refresh = useCallback(() => {
+  const refreshPrograms = useCallback(() => {
     return loadPrograms();
   }, [loadPrograms]);
 
-  const setFilter = useCallback((newFilters) => {
-    setPagination(prev => ({ ...prev, page: 1 }));
-    loadPrograms();
+  const updateFilters = useCallback((newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  }, []);
+
+  // ✅ Charger programmes SEULEMENT au montage initial
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      loadPrograms();
+    }
   }, [loadPrograms]);
+
+  // ✅ Recharger SEULEMENT si filtres changent (mais pas au montage initial)
+  useEffect(() => {
+    if (hasMounted.current) {
+      // Petit délai pour éviter appels multiples rapides
+      const timeoutId = setTimeout(() => {
+        loadPrograms();
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [filters.status, filters.search, filters.ordering, loadPrograms]);
 
   return {
     programs,
     loading,
     error,
-    pagination,
-    refresh,
-    setFilter,
+    filters,
+    updateFilters,
+    loadPrograms,
+    refreshPrograms
   };
 }

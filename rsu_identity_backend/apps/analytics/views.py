@@ -10,6 +10,7 @@ from rest_framework import status
 from django.db.models import Count, Avg, Sum, Q
 from django.utils import timezone
 from datetime import timedelta
+from apps.programs_app.models import SocialProgram
 
 from apps.identity_app.models import PersonIdentity, Household
 from apps.services_app.models import VulnerabilityAssessment
@@ -54,20 +55,21 @@ class DashboardStatsAPIView(APIView):
             avg_score=Avg('vulnerability_score')
         )['avg_score'] or 0
         
-        # Nombre de programmes actifs (à adapter selon votre modèle)
-        active_programs = 8  # Valeur fixe ou dynamique selon modèle Program
         
+
+        active_programs = SocialProgram.objects.filter(status='ACTIVE').count()
+        
+        # Distribution par province
         # Distribution par province
         province_distribution = list(
             PersonIdentity.objects.values('province')
             .annotate(
-                value=Count('id'),
-                percentage=Count('id') * 100.0 / total_beneficiaries if total_beneficiaries > 0 else 0
+                value=Count('id')
             )
             .order_by('-value')
         )
-        
-        # Ajout des noms de provinces lisibles
+
+        # Noms de provinces lisibles
         PROVINCE_NAMES = {
             'ESTUAIRE': 'Estuaire',
             'HAUT_OGOOUE': 'Haut-Ogooué',
@@ -79,9 +81,14 @@ class DashboardStatsAPIView(APIView):
             'OGOOUE_MARITIME': 'Ogooué-Maritime',
             'WOLEU_NTEM': 'Woleu-Ntem',
         }
-        
+
+        # Calculer total pour pourcentages
+        total_count = sum(item['value'] for item in province_distribution)
+
+        # Enrichir avec noms et pourcentages
         for item in province_distribution:
             item['name'] = PROVINCE_NAMES.get(item['province'], item['province'])
+            item['percentage'] = (item['value'] / total_count * 100) if total_count > 0 else 0
         
         # Enrôlements mensuels (6 derniers mois)
         monthly_enrollments = []
@@ -94,9 +101,11 @@ class DashboardStatsAPIView(APIView):
                 created_at__lt=month_end
             ).count()
             
+            # ✅ APRÈS
             monthly_enrollments.append({
                 'month': month_start.strftime('%b'),
-                'enrollments': count
+                'count': count,  # ✅ Cohérent avec le reste de l'API
+                'enrollments': count  # Garder les deux pour compatibilité
             })
         
         # Distribution vulnérabilité
