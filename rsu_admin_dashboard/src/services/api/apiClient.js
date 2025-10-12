@@ -92,6 +92,19 @@ class APIClient {
   async delete(endpoint) {
     return this.request(endpoint, { method: 'DELETE' });
   }
+
+  logout() {
+     localStorage.removeItem('access_token');
+     localStorage.removeItem('refresh_token');
+     localStorage.removeItem('user');
+     window.location.href = '/login';
+   }
+
+   isAuthenticated() {
+     return !!localStorage.getItem('access_token');
+   }
+  
+   
 }
 
 // Export instance singleton

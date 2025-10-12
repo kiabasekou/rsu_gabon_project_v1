@@ -12,6 +12,7 @@ import {
 import { programsAPI } from '../../services/api/programsAPI';
 import ProgramDetail from './ProgramDetail';
 
+
 export default function ProgramsTab() {
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,14 +33,19 @@ export default function ProgramsTab() {
       setLoading(true);
       const data = await programsAPI.getPrograms(filters);
       
-      // ✅ FIX: API retourne {count, results} avec pagination
-      const programsList = data.results || [];
+      // ✅ Gérer structure pagination Django
+      if (data.results) {
+        setPrograms(data.results);
+      } else if (Array.isArray(data)) {
+        setPrograms(data);
+      } else {
+        setPrograms([]);
+      }
       
-      setPrograms(programsList);
-      console.log(`✅ Programs loaded: ${programsList.length}`);
+      console.log(`✅ Programs loaded: ${programs.length}`);
     } catch (error) {
       console.error('Erreur chargement programmes:', error);
-      setPrograms([]); // ✅ Éviter les doublons en cas d'erreur
+      setPrograms([]);
     } finally {
       setLoading(false);
     }

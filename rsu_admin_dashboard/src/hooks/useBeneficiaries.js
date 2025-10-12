@@ -22,6 +22,18 @@ export function useBeneficiaries() {
   // Utiliser ref pour éviter re-renders
   const filtersRef = useRef(filters);
   const abortControllerRef = useRef(null);
+  // Avant loadBeneficiaries
+  const buildQueryParams = (filters) => {
+    const params = {};
+    
+    if (filters.province) params.province = filters.province;
+    if (filters.verification_status) params.verification_status = filters.verification_status;
+    if (filters.search) params.search = filters.search;
+    if (filters.vulnerability_min) params.vulnerability_score__gte = filters.vulnerability_min;
+    if (filters.vulnerability_max) params.vulnerability_score__lte = filters.vulnerability_max;
+    
+    return params;
+  };
 
   const loadBeneficiaries = useCallback(async (page = pagination.page, pageSize = pagination.pageSize) => {
     // Annuler requête précédente si en cours

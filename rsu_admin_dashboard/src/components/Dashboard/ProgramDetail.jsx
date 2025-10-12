@@ -1,6 +1,6 @@
 /**
- * 🇬🇦 RSU Gabon - Program Detail Component
- * Standards Top 1% - Vue Détaillée Programme avec Graphiques Recharts
+ * 🇬🇦 RSU Gabon - Program Detail ENRICHI
+ * Standards Top 1% - Vue Détaillée avec 4 Onglets Fonctionnels
  * Fichier: rsu_admin_dashboard/src/components/Dashboard/ProgramDetail.jsx
  */
 
@@ -12,19 +12,36 @@ import {
 import {
   ArrowLeft, DollarSign, Users, TrendingUp, Calendar,
   CheckCircle, Clock, XCircle, AlertTriangle, Activity,
-  Edit, Pause, Play, StopCircle, Download
+  Edit, Pause, Play, StopCircle, Download, Search,
+  Filter, Check, X, FileText, CreditCard
 } from 'lucide-react';
 import { programsAPI } from '../../services/api/programsAPI';
 
 export default function ProgramDetail({ programId, onBack }) {
   const [program, setProgram] = useState(null);
   const [statistics, setStatistics] = useState(null);
+  const [enrollments, setEnrollments] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // Filtres onglet Bénéficiaires
+  const [enrollmentFilters, setEnrollmentFilters] = useState({
+    status: '',
+    search: ''
+  });
 
   useEffect(() => {
     loadProgramDetails();
   }, [programId]);
+
+  useEffect(() => {
+    if (activeTab === 'beneficiaries') {
+      loadEnrollments();
+    } else if (activeTab === 'payments') {
+      loadPayments();
+    }
+  }, [activeTab, enrollmentFilters]);
 
   const loadProgramDetails = async () => {
     try {
@@ -42,6 +59,84 @@ export default function ProgramDetail({ programId, onBack }) {
     }
   };
 
+  const loadEnrollments = async () => {
+    try {
+      const data = await programsAPI.getEnrollments(programId, enrollmentFilters);
+      setEnrollments(data.results || data || []);
+      console.log(`✅ ${data.results?.length || data.length || 0} inscriptions chargées`);
+    } catch (error) {
+      console.error('Erreur chargement inscriptions:', error);
+      setEnrollments([]);
+    }
+  };
+
+  const loadPayments = async () => {
+    try {
+      const data = await programsAPI.getPayments(programId);
+      setPayments(data.results || data || []);
+      console.log(`✅ ${data.results?.length || data.length || 0} paiements chargés`);
+    } catch (error) {
+      console.error('Erreur chargement paiements:', error);
+      setPayments([]);
+    }
+  };
+
+  const handleEnrollmentAction = async (enrollmentId, action) => {
+    try {
+      if (action === 'approve') {
+        await programsAPI.approveEnrollment(enrollmentId);
+        console.log('✅ Inscription approuvée');
+      } else if (action === 'reject') {
+        await programsAPI.rejectEnrollment(enrollmentId);
+        console.log('✅ Inscription rejetée');
+      }
+      loadEnrollments(); // Rafraîchir liste
+    } catch (error) {
+      console.error(`❌ Erreur ${action}:`, error);
+    }
+  };
+
+  // === HELPERS ===
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'XAF',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const getStatusBadge = (status) => {
+    const styles = {
+      ACTIVE: 'bg-green-100 text-green-800 border-green-300',
+      DRAFT: 'bg-blue-100 text-blue-800 border-blue-300',
+      PAUSED: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      CLOSED: 'bg-gray-100 text-gray-800 border-gray-300',
+      PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      APPROVED: 'bg-green-100 text-green-800 border-green-300',
+      REJECTED: 'bg-red-100 text-red-800 border-red-300',
+      COMPLETED: 'bg-blue-100 text-blue-800 border-blue-300'
+    };
+    const labels = {
+      ACTIVE: 'Actif', DRAFT: 'Brouillon', PAUSED: 'Suspendu', CLOSED: 'Clôturé',
+      PENDING: 'En attente', APPROVED: 'Approuvé', REJECTED: 'Rejeté',
+      COMPLETED: 'Terminé', SUSPENDED: 'Suspendu'
+    };
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${styles[status] || styles.DRAFT}`}>
+        {labels[status] || status}
+      </span>
+    );
+  };
+
+  // === LOADING STATE ===
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -53,102 +148,383 @@ export default function ProgramDetail({ programId, onBack }) {
     );
   }
 
-  if (!program || !statistics) {
+  if (!program) {
     return (
       <div className="text-center py-12">
-        <AlertTriangle className="mx-auto text-red-600 mb-4" size={48} />
-        <p className="text-gray-600">Programme introuvable</p>
+        <AlertTriangle className="mx-auto text-gray-400 mb-4" size={48} />
+        <h3 className="text-xl font-semibold text-gray-700">Programme introuvable</h3>
+        <button onClick={onBack} className="mt-4 text-blue-600 hover:underline">
+          ← Retour à la liste
+        </button>
       </div>
     );
   }
 
-  // Couleurs statuts
-  const statusColors = {
-    ACTIVE: 'bg-green-100 text-green-800 border-green-300',
-    DRAFT: 'bg-blue-100 text-blue-800 border-blue-300',
-    PAUSED: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-    CLOSED: 'bg-gray-100 text-gray-800 border-gray-300'
+  // === RENDER TABS CONTENT ===
+  const renderOverviewTab = () => {
+    const budgetData = [
+      { name: 'Dépensé', value: parseFloat(program.budget_spent || 0), color: '#3b82f6' },
+      { name: 'Disponible', value: parseFloat(program.total_budget || 0) - parseFloat(program.budget_spent || 0), color: '#e5e7eb' }
+    ];
+
+    const capacityData = [
+      { name: 'Bénéficiaires', value: program.current_beneficiaries || 0, color: '#10b981' },
+      { name: 'Places restantes', value: (program.max_beneficiaries || 0) - (program.current_beneficiaries || 0), color: '#e5e7eb' }
+    ];
+
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+        {/* Graphique Budget */}
+        <div className="bg-white rounded-lg border p-6">
+          <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <DollarSign size={20} className="text-blue-600" />
+            Répartition Budget
+          </h4>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={budgetData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={(entry) => `${entry.name}: ${formatCurrency(entry.value)}`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {budgetData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => formatCurrency(value)} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Taux d'exécution: <span className="font-bold text-blue-600">
+                {((parseFloat(program.budget_spent) / parseFloat(program.total_budget)) * 100).toFixed(1)}%
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* Graphique Capacité */}
+        <div className="bg-white rounded-lg border p-6">
+          <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Users size={20} className="text-green-600" />
+            Capacité Bénéficiaires
+          </h4>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={capacityData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={(entry) => `${entry.name}: ${entry.value}`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {capacityData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-600">
+              Taux de remplissage: <span className="font-bold text-green-600">
+                {((program.current_beneficiaries / program.max_beneficiaries) * 100).toFixed(1)}%
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* Objectifs */}
+        <div className="bg-white rounded-lg border p-6 lg:col-span-2">
+          <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <TrendingUp size={20} className="text-purple-600" />
+            Objectifs du Programme
+          </h4>
+          <p className="text-gray-700 whitespace-pre-line">
+            {program.objectives || 'Aucun objectif défini'}
+          </p>
+        </div>
+      </div>
+    );
   };
 
-  const statusLabels = {
-    ACTIVE: 'Actif',
-    DRAFT: 'Brouillon',
-    PAUSED: 'Suspendu',
-    CLOSED: 'Clôturé'
+  const renderBeneficiariesTab = () => {
+    return (
+      <div className="p-6">
+        {/* Filtres */}
+        <div className="bg-white rounded-lg border p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Rechercher par nom..."
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={enrollmentFilters.search}
+                onChange={(e) => setEnrollmentFilters(prev => ({ ...prev, search: e.target.value }))}
+              />
+            </div>
+            <select
+              className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={enrollmentFilters.status}
+              onChange={(e) => setEnrollmentFilters(prev => ({ ...prev, status: e.target.value }))}
+            >
+              <option value="">Tous les statuts</option>
+              <option value="PENDING">En attente</option>
+              <option value="APPROVED">Approuvé</option>
+              <option value="REJECTED">Rejeté</option>
+              <option value="ACTIVE">Actif</option>
+              <option value="SUSPENDED">Suspendu</option>
+              <option value="COMPLETED">Terminé</option>
+            </select>
+            <button
+              onClick={() => setEnrollmentFilters({ status: '', search: '' })}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <Filter size={18} className="inline mr-2" />
+              Réinitialiser
+            </button>
+          </div>
+        </div>
+
+        {/* Table Inscriptions */}
+        <div className="bg-white rounded-lg border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Bénéficiaire
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Date Inscription
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {enrollments.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                      <Users className="mx-auto mb-2 text-gray-400" size={32} />
+                      Aucune inscription trouvée
+                    </td>
+                  </tr>
+                ) : (
+                  enrollments.map((enrollment) => (
+                    <tr key={enrollment.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900">
+                          {enrollment.beneficiary_name || `ID: ${enrollment.beneficiary}`}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          NIP: {enrollment.beneficiary_nip || 'N/A'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {formatDate(enrollment.enrollment_date)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {getStatusBadge(enrollment.status)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          {enrollment.status === 'PENDING' && (
+                            <>
+                              <button
+                                onClick={() => handleEnrollmentAction(enrollment.id, 'approve')}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Approuver"
+                              >
+                                <Check size={18} />
+                              </button>
+                              <button
+                                onClick={() => handleEnrollmentAction(enrollment.id, 'reject')}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Rejeter"
+                              >
+                                <X size={18} />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Voir détails"
+                          >
+                            <FileText size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Statistiques */}
+        {enrollments.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            {['PENDING', 'APPROVED', 'REJECTED', 'ACTIVE'].map(status => {
+              const count = enrollments.filter(e => e.status === status).length;
+              return (
+                <div key={status} className="bg-white rounded-lg border p-4">
+                  <div className="text-sm text-gray-600 mb-1">
+                    {status === 'PENDING' ? 'En attente' :
+                     status === 'APPROVED' ? 'Approuvés' :
+                     status === 'REJECTED' ? 'Rejetés' : 'Actifs'}
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">{count}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
-  // Données graphiques budget
-  const budgetData = [
-    { name: 'Utilisé', value: parseFloat(statistics.budget.spent), color: '#ef4444' },
-    { name: 'Disponible', value: parseFloat(statistics.budget.remaining), color: '#22c55e' }
-  ];
+  const renderPaymentsTab = () => {
+    return (
+      <div className="p-6">
+        {/* Timeline Paiements */}
+        <div className="bg-white rounded-lg border p-6">
+          <h4 className="font-semibold text-gray-800 mb-6 flex items-center gap-2">
+            <CreditCard size={20} className="text-green-600" />
+            Historique des Paiements
+          </h4>
 
-  // Données graphiques inscriptions
-  const enrollmentsData = [
-    { name: 'En attente', count: statistics.enrollments.pending, color: '#f59e0b' },
-    { name: 'Approuvées', count: statistics.enrollments.approved, color: '#3b82f6' },
-    { name: 'Actives', count: statistics.enrollments.active, color: '#22c55e' },
-    { name: 'Complétées', count: statistics.enrollments.completed, color: '#6b7280' },
-    { name: 'Rejetées', count: statistics.enrollments.rejected, color: '#ef4444' }
-  ];
+          {payments.length === 0 ? (
+            <div className="text-center py-12">
+              <CreditCard className="mx-auto mb-4 text-gray-400" size={48} />
+              <p className="text-gray-500">Aucun paiement effectué</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {payments.map((payment, index) => (
+                <div key={payment.id} className="flex items-start gap-4 pb-4 border-b last:border-0">
+                  <div className="flex-shrink-0">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      payment.status === 'COMPLETED' ? 'bg-green-100 text-green-600' :
+                      payment.status === 'PENDING' ? 'bg-yellow-100 text-yellow-600' :
+                      'bg-red-100 text-red-600'
+                    }`}>
+                      {payment.status === 'COMPLETED' ? <CheckCircle size={20} /> :
+                       payment.status === 'PENDING' ? <Clock size={20} /> :
+                       <XCircle size={20} />}
+                    </div>
+                  </div>
+                  <div className="flex-grow">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          Paiement #{payment.reference || payment.id}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {formatDate(payment.payment_date || payment.created_at)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-lg text-gray-900">
+                          {formatCurrency(payment.amount)}
+                        </p>
+                        {getStatusBadge(payment.status)}
+                      </div>
+                    </div>
+                    {payment.beneficiary_name && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Bénéficiaire: {payment.beneficiary_name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-  // Données graphiques paiements
-  const paymentsData = [
-    { name: 'Complétés', count: statistics.payments.completed, color: '#22c55e' },
-    { name: 'En attente', count: statistics.payments.pending, color: '#f59e0b' },
-    { name: 'Échoués', count: statistics.payments.failed, color: '#ef4444' }
-  ];
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'XAF',
-      minimumFractionDigits: 0
-    }).format(amount);
+        {/* Statistiques Paiements */}
+        {payments.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div className="bg-white rounded-lg border p-4">
+              <div className="text-sm text-gray-600 mb-1">Total Payé</div>
+              <div className="text-2xl font-bold text-gray-900">
+                {formatCurrency(payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0))}
+              </div>
+            </div>
+            <div className="bg-white rounded-lg border p-4">
+              <div className="text-sm text-gray-600 mb-1">Nombre de Paiements</div>
+              <div className="text-2xl font-bold text-gray-900">{payments.length}</div>
+            </div>
+            <div className="bg-white rounded-lg border p-4">
+              <div className="text-sm text-gray-600 mb-1">Taux de Succès</div>
+              <div className="text-2xl font-bold text-green-600">
+                {((payments.filter(p => p.status === 'COMPLETED').length / payments.length) * 100).toFixed(0)}%
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const renderAnalyticsTab = () => {
+    return (
+      <div className="p-6">
+        <div className="bg-white rounded-lg border p-8 text-center">
+          <Activity className="mx-auto mb-4 text-purple-600" size={48} />
+          <h3 className="text-xl font-bold text-gray-800 mb-2">
+            Analytics Avancées
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Prédictions ML, détection fraude, et recommandations IA
+          </p>
+          <p className="text-sm text-gray-500">
+            Module en développement - Disponible prochainement
+          </p>
+        </div>
+      </div>
+    );
   };
 
+  // === MAIN RENDER ===
   return (
     <div className="space-y-6">
-      {/* En-tête avec navigation */}
+      {/* Header */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <button
           onClick={onBack}
-          className="mb-4 flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"
+          className="mb-4 flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
         >
           <ArrowLeft size={20} />
-          <span>Retour à la liste</span>
+          Retour à la liste
         </button>
 
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <div className="flex-1">
+        <div className="flex justify-between items-start">
+          <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-800">{program.name}</h1>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusColors[program.status]}`}>
-                {statusLabels[program.status]}
-              </span>
+              <h2 className="text-2xl font-bold text-gray-800">{program.name}</h2>
+              {getStatusBadge(program.status)}
             </div>
-            <p className="text-gray-600 mb-2">Code: <span className="font-mono font-semibold">{program.code}</span></p>
-            {program.description && (
-              <p className="text-gray-600 mt-3">{program.description}</p>
-            )}
-            {program.objectives && (
-              <div className="mt-3">
-                <p className="text-sm font-semibold text-gray-700">Objectifs:</p>
-                <p className="text-sm text-gray-600">{program.objectives}</p>
-              </div>
-            )}
+            <p className="text-gray-600 mb-1">Code: <span className="font-mono font-semibold">{program.code}</span></p>
+            <p className="text-gray-600">Catégorie: {program.category_name || 'N/A'}</p>
           </div>
 
-          {/* Actions rapides */}
-          <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
             <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors">
               <Edit size={18} />
               Modifier
@@ -171,7 +547,7 @@ export default function ProgramDetail({ programId, onBack }) {
           </div>
         </div>
 
-        {/* Informations clés */}
+        {/* Infos clés */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t">
           <div>
             <p className="text-sm text-gray-500">Date de début</p>
@@ -198,278 +574,41 @@ export default function ProgramDetail({ programId, onBack }) {
         </div>
       </div>
 
-      {/* Onglets navigation */}
+      {/* Tabs Navigation */}
       <div className="bg-white rounded-lg shadow-md">
         <div className="border-b border-gray-200">
           <nav className="flex gap-8 px-6" role="tablist">
-            {['overview', 'beneficiaries', 'payments', 'analytics'].map((tab) => (
+            {[
+              { id: 'overview', label: 'Vue d\'ensemble', icon: Activity },
+              { id: 'beneficiaries', label: 'Bénéficiaires', icon: Users },
+              { id: 'payments', label: 'Paiements', icon: CreditCard },
+              { id: 'analytics', label: 'Analytics', icon: TrendingUp }
+            ].map(({ id, label, icon: Icon }) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-4 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === tab
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`py-4 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
+                  activeTab === id
                     ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
+                role="tab"
+                aria-selected={activeTab === id}
               >
-                {tab === 'overview' && 'Vue d\'ensemble'}
-                {tab === 'beneficiaries' && 'Bénéficiaires'}
-                {tab === 'payments' && 'Paiements'}
-                {tab === 'analytics' && 'Analytics'}
+                <Icon size={18} />
+                {label}
               </button>
             ))}
           </nav>
         </div>
 
-        <div className="p-6">
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              {/* Statistiques Budget */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-blue-800">Budget Total</h3>
-                    <DollarSign className="text-blue-600" size={24} />
-                  </div>
-                  <p className="text-3xl font-bold text-blue-900">
-                    {formatCurrency(statistics.budget.total)}
-                  </p>
-                </div>
-
-                <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-6 border border-red-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-red-800">Budget Utilisé</h3>
-                    <TrendingUp className="text-red-600" size={24} />
-                  </div>
-                  <p className="text-3xl font-bold text-red-900">
-                    {formatCurrency(statistics.budget.spent)}
-                  </p>
-                  <p className="text-sm text-red-600 mt-2">
-                    {statistics.budget.percentage_used.toFixed(1)}% utilisé
-                  </p>
-                </div>
-
-                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-green-800">Budget Disponible</h3>
-                    <CheckCircle className="text-green-600" size={24} />
-                  </div>
-                  <p className="text-3xl font-bold text-green-900">
-                    {formatCurrency(statistics.budget.remaining)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Graphiques Budget et Inscriptions */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Graphique Budget */}
-                <div className="bg-white border rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
-                    <DollarSign size={20} className="text-blue-600" />
-                    Utilisation Budget
-                  </h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={budgetData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {budgetData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => formatCurrency(value)} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="mt-4 p-4 bg-gray-50 rounded">
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-blue-600 h-3 rounded-full transition-all"
-                        style={{ width: `${statistics.budget.percentage_used}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-2 text-center">
-                      Taux d'utilisation: <span className="font-semibold">{statistics.budget.percentage_used.toFixed(1)}%</span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Graphique Inscriptions */}
-                <div className="bg-white border rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
-                    <Users size={20} className="text-purple-600" />
-                    Statut Inscriptions
-                  </h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={enrollmentsData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" angle={-15} textAnchor="end" height={80} />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="count" name="Inscriptions">
-                        {enrollmentsData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
-                    <div className="text-center p-2 bg-green-50 rounded">
-                      <p className="font-semibold text-green-800">{statistics.enrollments.active}</p>
-                      <p className="text-gray-600">Actives</p>
-                    </div>
-                    <div className="text-center p-2 bg-yellow-50 rounded">
-                      <p className="font-semibold text-yellow-800">{statistics.enrollments.pending}</p>
-                      <p className="text-gray-600">En attente</p>
-                    </div>
-                    <div className="text-center p-2 bg-gray-50 rounded">
-                      <p className="font-semibold text-gray-800">{statistics.enrollments.total}</p>
-                      <p className="text-gray-600">Total</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Capacité Bénéficiaires */}
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
-                  <Users size={20} className="text-indigo-600" />
-                  Capacité Bénéficiaires
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center">
-                    <p className="text-4xl font-bold text-indigo-600">{statistics.beneficiaries.current}</p>
-                    <p className="text-gray-600 mt-2">Bénéficiaires actuels</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-4xl font-bold text-gray-700">{statistics.beneficiaries.max || '∞'}</p>
-                    <p className="text-gray-600 mt-2">Capacité maximum</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-4xl font-bold text-green-600">
-                      {statistics.beneficiaries.remaining || '∞'}
-                    </p>
-                    <p className="text-gray-600 mt-2">Places restantes</p>
-                  </div>
-                </div>
-                {statistics.beneficiaries.max && (
-                  <div className="mt-6">
-                    <div className="w-full bg-gray-200 rounded-full h-4">
-                      <div
-                        className={`h-4 rounded-full transition-all ${
-                          statistics.beneficiaries.is_full ? 'bg-red-600' :
-                          (statistics.beneficiaries.current / statistics.beneficiaries.max) > 0.8 ? 'bg-orange-600' :
-                          'bg-green-600'
-                        }`}
-                        style={{
-                          width: `${Math.min((statistics.beneficiaries.current / statistics.beneficiaries.max * 100), 100)}%`
-                        }}
-                      ></div>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-2 text-center">
-                      Taux de remplissage: <span className="font-semibold">
-                        {((statistics.beneficiaries.current / statistics.beneficiaries.max) * 100).toFixed(1)}%
-                      </span>
-                      {statistics.beneficiaries.is_full && (
-                        <span className="ml-2 text-red-600 font-semibold">⚠️ Programme complet</span>
-                      )}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Statistiques Paiements */}
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">
-                  <Activity size={20} className="text-emerald-600" />
-                  Statistiques Paiements
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-gray-600">Total</span>
-                      <Calendar className="text-gray-400" size={18} />
-                    </div>
-                    <p className="text-2xl font-bold text-gray-800">{statistics.payments.total_count}</p>
-                  </div>
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-green-700">Complétés</span>
-                      <CheckCircle className="text-green-600" size={18} />
-                    </div>
-                    <p className="text-2xl font-bold text-green-800">{statistics.payments.completed}</p>
-                  </div>
-                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-yellow-700">En attente</span>
-                      <Clock className="text-yellow-600" size={18} />
-                    </div>
-                    <p className="text-2xl font-bold text-yellow-800">{statistics.payments.pending}</p>
-                  </div>
-                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-red-700">Échoués</span>
-                      <XCircle className="text-red-600" size={18} />
-                    </div>
-                    <p className="text-2xl font-bold text-red-800">{statistics.payments.failed}</p>
-                  </div>
-                </div>
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-700 mb-1">Montant total versé:</p>
-                  <p className="text-3xl font-bold text-blue-900">
-                    {formatCurrency(statistics.payments.total_amount)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'beneficiaries' && (
-            <div className="text-center py-12">
-              <Users className="mx-auto text-gray-400 mb-4" size={48} />
-              <p className="text-gray-600">Liste détaillée des bénéficiaires à implémenter</p>
-              <p className="text-sm text-gray-500 mt-2">
-                Endpoint disponible: GET /programs/programs/{programId}/enrollments/
-              </p>
-            </div>
-          )}
-
-          {activeTab === 'payments' && (
-            <div className="text-center py-12">
-              <DollarSign className="mx-auto text-gray-400 mb-4" size={48} />
-              <p className="text-gray-600">Historique des paiements à implémenter</p>
-              <p className="text-sm text-gray-500 mt-2">
-                Endpoint disponible: GET /programs/payments/?program={programId}
-              </p>
-            </div>
-          )}
-
-          {activeTab === 'analytics' && (
-            <div className="text-center py-12">
-              <Activity className="mx-auto text-gray-400 mb-4" size={48} />
-              <p className="text-gray-600">Analytics avancés à implémenter</p>
-              <p className="text-sm text-gray-500 mt-2">
-                Prévisions ML, tendances, recommandations
-              </p>
-            </div>
-          )}
+        {/* Tab Content */}
+        <div role="tabpanel">
+          {activeTab === 'overview' && renderOverviewTab()}
+          {activeTab === 'beneficiaries' && renderBeneficiariesTab()}
+          {activeTab === 'payments' && renderPaymentsTab()}
+          {activeTab === 'analytics' && renderAnalyticsTab()}
         </div>
-      </div>
-
-      {/* Informations API */}
-      <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded text-sm">
-        <p className="font-semibold text-blue-800 mb-2">📡 Sources de données:</p>
-        <ul className="text-blue-700 space-y-1">
-          <li>✅ GET /api/v1/programs/programs/{programId}/</li>
-          <li>✅ GET /api/v1/programs/programs/{programId}/statistics/</li>
-          <li className="text-blue-500">🔄 Rafraîchissement automatique toutes les 30s</li>
-        </ul>
       </div>
     </div>
   );

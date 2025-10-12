@@ -4,17 +4,22 @@
  * Fichier: rsu_admin_dashboard/src/hooks/usePrograms.js
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import apiClient from '../services/api/apiClient';
+import ENDPOINTS from '../services/api/endpoints';
+
+// ✅ Supprimer l'import programsAPI si utilisation d'apiClient direct
+// OU créer programsAPI.js et importer
 import { programsAPI } from '../services/api/programsAPI';
 
-export function usePrograms() {
+export function usePrograms(filters = {}) {
   const [programs, setPrograms] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    status: '',
-    search: '',
-    ordering: '-created_at'
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 50,
+    total: 0,
   });
 
   const loadPrograms = useCallback(async (customFilters = null) => {
@@ -25,9 +30,12 @@ export function usePrograms() {
       const filterParams = customFilters || filters;
       console.log('📥 Loading programs with filters:', filterParams);
       
+      // ✅ OPTION A: Utiliser programsAPI
       const data = await programsAPI.getPrograms(filterParams);
       
-      // ✅ FIX: API retourne {count, results} avec pagination
+      // ✅ OPTION B: Appel direct apiClient
+      // const data = await apiClient.get(ENDPOINTS.PROGRAMS.PROGRAMS, filterParams);
+      
       const programsList = data.results || [];
       
       setPrograms(programsList);
@@ -39,41 +47,25 @@ export function usePrograms() {
       setLoading(false);
     }
   }, [filters]);
-
-  const refreshPrograms = useCallback(() => {
+  useEffect(() => {
     loadPrograms();
   }, [loadPrograms]);
 
-  const updateFilters = useCallback((newFilters) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-  }, []);
+  const refresh = useCallback(() => {
+    return loadPrograms();
+  }, [loadPrograms]);
 
-  // Charger programmes au montage et quand filtres changent
-  useEffect(() => {
-    // ✅ FIX: Éviter double appel en React 18 Strict Mode
-    let isMounted = true;
-    
-    const fetchPrograms = async () => {
-      if (isMounted) {
-        await loadPrograms();
-      }
-    };
-    
-    fetchPrograms();
-    
-    return () => {
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.status, filters.search, filters.ordering]);
+  const setFilter = useCallback((newFilters) => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+    loadPrograms();
+  }, [loadPrograms]);
 
   return {
     programs,
     loading,
     error,
-    filters,
-    updateFilters,
-    loadPrograms,
-    refreshPrograms
+    pagination,
+    refresh,
+    setFilter,
   };
 }

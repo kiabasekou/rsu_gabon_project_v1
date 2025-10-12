@@ -1,36 +1,166 @@
 /**
- * 🇬🇦 RSU Gabon - Dashboard Principal
- * Standards Top 1% - Intégration APIs Django REST
- * Fichier: rsu_admin_dashboard/src/pages/Dashboard.jsx
+ * 🇬🇦 RSU Gabon - Dashboard Principal FUSIONNÉ
+ * Standards Top 1% - Fichier: rsu_admin_dashboard/src/pages/Dashboard.jsx
  */
 
-import React, { useState, useCallback } from 'react'; // Importer useCallback pour les handlers
+import React, { useState, useCallback } from 'react';
 import Header from '../components/Layout/Header';
 import TabNavigation from '../components/Dashboard/TabNavigation';
-import OverviewTab from '../components/Dashboard/OverviewTab';
+// OverviewTab n'est plus importé car il est défini localement
 import BeneficiariesTab from '../components/Dashboard/BeneficiariesTab';
-import ProgramsTab from '../components/Dashboard/ProgramsTab'; // ✅ Import OK
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import ProgramsTab from '../components/Dashboard/ProgramsTab';
+import { AlertCircle, CheckCircle, BarChart, PieChart, LineChart, RefreshCw } from 'lucide-react';
 import { useDashboard, useBeneficiaries } from '../hooks/useDashboard';
-import { usePrograms } from '../hooks/usePrograms'; // ✅ Import OK
 import apiClient from '../services/api/apiClient';
 
+// ================================================================================
+// 1. COMPOSANTS HELPER (StatCard et VulnCard)
+// ================================================================================
+
+function StatCard({ title, value, icon, color }) {
+  const colors = {
+    blue: 'bg-blue-100 text-blue-600',
+    green: 'bg-green-100 text-green-600',
+    purple: 'bg-purple-100 text-purple-600',
+    orange: 'bg-orange-100 text-orange-600'
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-gray-500 text-sm">{title}</p>
+          <p className="text-2xl font-bold mt-1">{value}</p>
+        </div>
+        <div className={`p-3 rounded-full ${colors[color]}`}>
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VulnCard({ level, count, color }) {
+  const colors = {
+    red: 'bg-red-100 text-red-800 border-red-300',
+    orange: 'bg-orange-100 text-orange-800 border-orange-300',
+    yellow: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    green: 'bg-green-100 text-green-800 border-green-300'
+  };
+
+  return (
+    <div className={`p-4 rounded-lg border-2 ${colors[color]}`}>
+      <p className="text-sm font-medium">{level}</p>
+      <p className="text-3xl font-bold mt-1">{count}</p>
+    </div>
+  );
+}
+
+// ================================================================================
+// 2. COMPOSANT OVERVIEW TAB (Fusionné)
+// ================================================================================
+
+function OverviewTab({ data, loading, error, onRefresh }) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-48 bg-white rounded-lg shadow">
+        <p className="text-lg text-gray-600">Chargement des données du tableau de bord...</p>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="p-8 bg-white rounded-lg shadow text-center">
+        <AlertCircle className="text-red-500 mx-auto mb-4" size={30} />
+        <p className="text-lg text-red-700">Impossible d'afficher l'aperçu: {error?.message || "Données manquantes."}</p>
+        <button 
+          onClick={onRefresh}
+          className="mt-4 px-4 py-2 text-sm bg-gray-200 rounded hover:bg-gray-300 flex items-center mx-auto"
+        >
+          <RefreshCw size={16} className="mr-2" /> Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  // Utilisation des données du hook useDashboard
+  const { overview, vulnerability, geographic } = data;
+  
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-800">Aperçu Général des Données RSU</h1>
+      
+      {/* Statistiques Générales */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <StatCard 
+          title="Total Personnes" 
+          value={overview?.total_persons?.toLocaleString('fr-FR') || 0}
+          icon={<BarChart />}
+          color="blue"
+        />
+        <StatCard 
+          title="Total Ménages" 
+          value={overview?.total_households?.toLocaleString('fr-FR') || 0}
+          icon={<PieChart />}
+          color="green"
+        />
+        <StatCard 
+          title="Taux Vérification" 
+          value={`${overview?.verification_rate?.toFixed(1) || 0}%`}
+          icon={<LineChart />}
+          color="purple"
+        />
+        <StatCard 
+          title="Complétude Moyenne" 
+          value={`${overview?.avg_completeness?.toFixed(1) || 0}%`}
+          icon={<BarChart />}
+          color="orange"
+        />
+      </div>
+
+      {/* Vulnérabilité */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-4">Répartition Vulnérabilité</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <VulnCard level="Critique" count={vulnerability?.distribution?.CRITICAL?.toLocaleString('fr-FR') || 0} color="red" />
+          <VulnCard level="Élevé" count={vulnerability?.distribution?.HIGH?.toLocaleString('fr-FR') || 0} color="orange" />
+          <VulnCard level="Modéré" count={vulnerability?.distribution?.MODERATE?.toLocaleString('fr-FR') || 0} color="yellow" />
+          <VulnCard level="Faible" count={vulnerability?.distribution?.LOW?.toLocaleString('fr-FR') || 0} color="green" />
+        </div>
+      </div>
+
+      {/* Distribution Géographique */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-4">Distribution par Province</h2>
+        <div className="space-y-2">
+          {geographic?.by_province?.map(prov => (
+            <div key={prov.province} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+              <span className="font-medium">{prov.province}</span>
+              <span className="text-gray-600">{prov.count?.toLocaleString('fr-FR') || 0} personnes</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ================================================================================
+// 3. COMPOSANT PRINCIPAL (Dashboard)
+// ================================================================================
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
-  // NOTE: Utiliser `useMemo` pour initialiser `currentUser` si la valeur est complexe ou
-  // dépend de props/state, mais ici un simple `useState` avec une fonction d'initialisation
-  // est acceptable pour un appel unique.
-  const [currentUser] = useState(() => apiClient.getCurrentUser() || {
+  
+  // Récupération de l'utilisateur
+  const currentUser = apiClient.getCurrentUser() || {
     username: 'admin',
     user_type: 'ADMIN'
-  });
+  };
 
-  // ================================================================================
   // HOOKS DE DONNÉES
-  // ================================================================================
-
-  // ✅ Hook pour le tableau de bord (résumé global)
   const {
     data: dashboardData,
     loading: dashboardLoading,
@@ -39,146 +169,80 @@ export default function Dashboard() {
     lastUpdate
   } = useDashboard();
 
-  // ✅ Hook pour la liste des bénéficiaires
   const {
     beneficiaries,
     loading: beneficiariesLoading,
-    error: beneficiariesError, // Maintenir l'erreur pour la vue spécifique
+    error: beneficiariesError,
     pagination: beneficiariesPagination,
-    refresh: refreshBeneficiaries,
-    setFilter: setBeneficiariesFilter // Ajout hypothétique pour la recherche
+    refresh: refreshBeneficiaries
   } = useBeneficiaries();
 
-  // 💡 NOUVEAU : Hook pour la liste des programmes
-  const {
-    programs,
-    loading: programsLoading,
-    error: programsError, // Maintenir l'erreur pour la vue spécifique
-    pagination: programsPagination,
-    refresh: refreshPrograms,
-    setFilter: setProgramsFilter // Ajout hypothétique pour la recherche
-  } = usePrograms();
-
-
-  // ================================================================================
-  // HANDLERS GLOBALES
-  // ================================================================================
-
-  /**
-   * Gère la recherche globale/spécifique à l'onglet actif.
-   * @param {Object} params - Paramètres de recherche/filtrage
-   */
-  const handleSearch = useCallback((params) => {
-    console.log(`🔍 Recherche dans l'onglet ${activeTab} avec:`, params);
-    
-    // Dispatcher la recherche au hook approprié
-    if (activeTab === 'beneficiaries' && setBeneficiariesFilter) {
-      setBeneficiariesFilter(params);
-    } else if (activeTab === 'programs' && setProgramsFilter) {
-      setProgramsFilter(params);
+  // HANDLERS
+  const handleSearch = useCallback((query) => {
+    console.log('🔍 Search query:', query);
+    if (activeTab === 'beneficiaries') {
+      // Passer la query au hook pour filtrer
+      refreshBeneficiaries({ query }); 
     }
-    // else: TODO: Implémenter la recherche API pour les autres onglets si nécessaire.
-    
-  }, [activeTab, setBeneficiariesFilter, setProgramsFilter]);
+  }, [activeTab, refreshBeneficiaries]);
 
+  const handleExport = useCallback(() => {
+    console.log('📥 Export requested for tab:', activeTab);
+  }, [activeTab]);
 
-  const handleExport = useCallback(async () => {
-    console.log('📥 Export des données...');
-    // TODO: Implémenter export CSV/Excel pour l'onglet actif
-  }, []);
-
-  // Détermine la fonction de rafraîchissement et l'état de chargement en fonction de l'onglet
-  const getCurrentRefresh = () => {
-    switch (activeTab) {
-      case 'overview':
-        return refreshDashboard;
-      case 'beneficiaries':
-        return refreshBeneficiaries;
-      case 'programs':
-        return refreshPrograms;
-      default:
-        return () => console.log('No refresh action for this tab.');
+  const handleRefresh = useCallback(() => {
+    if (activeTab === 'overview') {
+      refreshDashboard();
+    } else if (activeTab === 'beneficiaries') {
+      refreshBeneficiaries(); 
     }
-  };
+  }, [activeTab, refreshDashboard, refreshBeneficiaries]);
 
-  const getCurrentLoading = dashboardLoading || beneficiariesLoading || programsLoading;
-  // NOTE: On vérifie l'erreur la plus critique (Dashboard principal) pour le grand écran d'erreur
+  // GESTION ERREURS GLOBALES
+  const hasError = dashboardError || beneficiariesError;
+  const errorMessage = (dashboardError || beneficiariesError)?.toString() || "Une erreur inconnue est survenue.";
 
-  // ================================================================================
-  // RENDU D'ERREUR CRITIQUE (Dashboard principal)
-  // ================================================================================
+  // RENDER
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header user={currentUser} onRefresh={handleRefresh} />
 
-  if (dashboardError && !dashboardLoading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-          <AlertCircle className="text-red-600 mx-auto mb-4" size={64} />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Erreur de Connexion</h2>
-          {/* Afficher l'erreur spécifique si elle est une chaîne, sinon un message générique */}
-          <p className="text-gray-600 mb-4">{typeof dashboardError === 'string' ? dashboardError : "Une erreur inattendue est survenue lors du chargement."}</p>
-          <div className="space-y-2">
-            <button
-              onClick={refreshDashboard}
-              className="w-full px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Réessayer
-            </button>
-            <p className="text-xs text-gray-500">
-              Vérifiez que le backend Django est démarré sur {process.env.REACT_APP_API_URL || 'http://localhost:8000'}
+      {/* Messages globaux */}
+      {hasError && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="text-red-600 mt-0.5 flex-shrink-0" size={20} />
+            <div>
+              <h4 className="font-semibold text-red-800">Erreur de chargement</h4>
+              <p className="text-sm text-red-700 mt-1">{errorMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {lastUpdate && activeTab === 'overview' && !hasError && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-3">
+            <CheckCircle className="text-green-600 flex-shrink-0" size={18} />
+            <p className="text-sm text-green-700">
+              Dernière mise à jour du tableau de bord : {lastUpdate.toLocaleTimeString('fr-FR')}
             </p>
           </div>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  // Console log de débogage (peut être retiré en production)
-  // console.log('📊 Dashboard state:');
-  // console.log('   activeTab:', activeTab);
-  // console.log('   programs:', programs);
-  // console.log('   programs.length:', programs?.length);
-  // console.log('   programsLoading:', programsLoading);
+      {/* Navigation par onglets */}
+      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
-  // ================================================================================
-  // RENDU PRINCIPAL
-  // ================================================================================
-
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <Header 
-        currentUser={currentUser}
-        // Utiliser la fonction dynamique de rafraîchissement
-        onRefresh={getCurrentRefresh()}
-        loading={getCurrentLoading}
-      />
-
-      <TabNavigation 
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
-
+      {/* Contenu principal */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Indicateur de dernière mise à jour (Afficher uniquement si la vue principale a chargé) */}
-        {lastUpdate && (
-          <div className="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <CheckCircle size={18} className="text-blue-600" />
-              <span className="text-sm text-blue-800">
-                Données actualisées : {lastUpdate.toLocaleTimeString('fr-FR')}
-              </span>
-            </div>
-            <span className="text-xs text-blue-600 font-mono">
-              Backend: {process.env.REACT_APP_API_URL || 'http://localhost:8000'}
-            </span>
-          </div>
-        )}
-
         {activeTab === 'overview' && (
-          <OverviewTab 
-            data={dashboardData} 
+          // Utilise le composant OverviewTab défini localement
+          <OverviewTab
+            data={dashboardData}
             loading={dashboardLoading}
-            // L'erreur spécifique est gérée ici
             error={dashboardError} 
+            onRefresh={refreshDashboard}
           />
         )}
 
@@ -187,26 +251,14 @@ export default function Dashboard() {
             beneficiaries={beneficiaries}
             loading={beneficiariesLoading}
             pagination={beneficiariesPagination}
-            onSearch={handleSearch} // Utiliser le handler mis à jour
+            onSearch={handleSearch}
             onExport={handleExport}
-            error={beneficiariesError} // Afficher l'erreur dans l'onglet
+            error={beneficiariesError}
+            onPageChange={refreshBeneficiaries}
           />
-        )}
-        {activeTab === 'programs' && (
-          <ProgramsTab />
         )}
 
-        {/* 💡 NOUVEAU : Intégration de l'onglet ProgramsTab */}
-        {activeTab === 'programs' && (
-          <ProgramsTab
-            programs={programs}
-            loading={programsLoading}
-            pagination={programsPagination}
-            onSearch={handleSearch} // Utiliser le handler mis à jour
-            onExport={handleExport}
-            error={programsError} // Afficher l'erreur dans l'onglet
-          />
-        )}
+        {activeTab === 'programs' && <ProgramsTab />}
 
         {activeTab === 'analytics' && (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
