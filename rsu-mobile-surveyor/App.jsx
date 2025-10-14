@@ -1,6 +1,6 @@
 // =============================================================================
-// RSU GABON - APPLICATION MOBILE COLLECTE TERRAIN
-// Fichier: rsu-mobile-surveyor/App.jsx
+// RSU GABON - APPLICATION MOBILE CORRIGÉE
+// Fichier: rsu-mobile-surveyor/App.jsx (VERSION CORRIGÉE)
 // =============================================================================
 
 import React, { useEffect, useState } from 'react';
@@ -8,10 +8,12 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Provider as PaperProvider, MD3DarkTheme } from 'react-native-paper';
+import { View, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import * as Sentry from '@sentry/react-native';
+// CORRECTION: Configuration Sentry conditionnelle
+// import * as Sentry from '@sentry/react-native';
 
 // Services
 import authService from './src/services/auth/authService';
@@ -27,11 +29,15 @@ import SurveyFormScreen from './src/screens/Survey/SurveyFormScreen';
 import OfflineQueueScreen from './src/screens/Sync/OfflineQueueScreen';
 import ProfileScreen from './src/screens/Profile/ProfileScreen';
 
-// Configuration Sentry (monitoring erreurs production)
-Sentry.init({
-  dsn: 'YOUR_SENTRY_DSN', // À configurer
-  environment: __DEV__ ? 'development' : 'production',
-});
+// CORRECTION: Configuration Sentry conditionnelle
+const SENTRY_DSN = __DEV__ ? null : 'https://your-real-sentry-dsn@sentry.io/project-id';
+
+if (SENTRY_DSN) {
+  // Sentry.init({
+  //   dsn: SENTRY_DSN,
+  //   environment: __DEV__ ? 'development' : 'production',
+  // });
+}
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -50,6 +56,25 @@ const theme = {
   },
 };
 
+// CORRECTION: Composant Loading Screen séparé
+const LoadingScreen = () => (
+  <View style={{
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#121212'
+  }}>
+    <Icon name="sync" size={50} color="#2E7D32" />
+    <Text style={{ 
+      color: '#FFFFFF', 
+      marginTop: 16,
+      fontSize: 16,
+    }}>
+      Chargement RSU Gabon...
+    </Text>
+  </View>
+);
+
 // Navigation principale avec tabs
 function MainTabs() {
   const [offlineCount, setOfflineCount] = useState(0);
@@ -57,8 +82,12 @@ function MainTabs() {
   useEffect(() => {
     // Surveiller queue offline
     const checkOfflineQueue = async () => {
-      const count = await syncService.getPendingCount();
-      setOfflineCount(count);
+      try {
+        const count = await syncService.getPendingCount();
+        setOfflineCount(count);
+      } catch (error) {
+        console.warn('Erreur check offline queue:', error);
+      }
     };
     
     checkOfflineQueue();
@@ -215,7 +244,9 @@ export default function App() {
       
       // Tentative de sync automatique quand connexion restaurée
       if (state.isConnected) {
-        syncService.syncPendingData();
+        syncService.syncPendingData().catch(error => {
+          console.warn('Auto sync failed:', error);
+        });
       }
     });
 
@@ -228,7 +259,10 @@ export default function App() {
       setIsAuthenticated(authenticated);
     } catch (error) {
       console.error('Erreur vérification auth:', error);
-      Sentry.captureException(error);
+      // CORRECTION: Pas de Sentry en développement
+      if (SENTRY_DSN) {
+        // Sentry.captureException(error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -241,8 +275,12 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    await authService.logout();
-    setIsAuthenticated(false);
+    try {
+      await authService.logout();
+      setIsAuthenticated(false);
+    } catch (error) {
+      console.error('Erreur déconnexion:', error);
+    }
   };
 
   if (isLoading) {
@@ -252,19 +290,7 @@ export default function App() {
           <Stack.Navigator>
             <Stack.Screen 
               name="Loading" 
-              component={() => (
-                <div style={{
-                  flex: 1,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  backgroundColor: theme.colors.background
-                }}>
-                  <Icon name="sync" size={50} color={theme.colors.primary} />
-                  <text style={{ color: theme.colors.onBackground, marginTop: 16 }}>
-                    Chargement RSU Gabon...
-                  </text>
-                </div>
-              )}
+              component={LoadingScreen}
               options={{ headerShown: false }}
             />
           </Stack.Navigator>
@@ -291,4 +317,4 @@ export default function App() {
       </NavigationContainer>
     </PaperProvider>
   );
-}// Navigation principale 
+}

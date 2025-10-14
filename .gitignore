@@ -1,391 +1,211 @@
-# ============================================
-# 🇬🇦 RSU GABON - .gitignore Complet
-# Standards Top 1% - Multi-environnements
-# ============================================
+# =============================================================================
+# 🇬🇦 RSU GABON - .gitignore Complet et Optimisé
+# =============================================================================
 
-# ============================================
-# BACKEND DJANGO
-# ============================================
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual Environment
-venv/
-ENV/
-env/
-.venv
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Django
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-/media
-/static
-/staticfiles
-
-# Django migrations (garder les fichiers, ignorer certains)
-# Décommenter si besoin d'ignorer migrations spécifiques
-# **/migrations/*
-# !**/migrations/__init__.py
-
-# Django secret keys et configs sensibles
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.env
-
-# Coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
-
-# Translations
-*.mo
-*.pot
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath
-*.sage.py
-
-# Spyder
-.spyderproject
-.spyproject
-
-# Rope
-.ropeproject
-
-# PyCharm
-.idea/
-*.iml
-*.iws
-.idea_modules/
-
-# VS Code
-.vscode/
-*.code-workspace
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# ============================================
-# FRONTEND REACT
-# ============================================
-
-# Dependencies
-node_modules/
-/.pnp
-.pnp.js
-
-# Testing
-/coverage
-
-# Production builds
-/build
-/dist
-
-# React misc
-.DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
-
-# Editor directories and files
-.idea
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Optional npm cache directory
+# =============================================================================
+# 1. DEPENDANCES, BINAIRES & CACHE (FRONT & BACK)
+# =============================================================================
+# NODE
+/node_modules
+/npm-debug.log*
+/yarn-debug.log*
+/yarn-error.log*
+/lerna-debug.log*
 .npm
-
-# Optional eslint cache
-.eslintcache
-
-# Optional stylelint cache
-.stylelintcache
-
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn
 .yarn-integrity
 .yarn/cache
 .yarn/unplugged
 .yarn/build-state.yml
 .yarn/install-state.gz
-.pnp.*
+.pnp
+.pnp.js
+.pnpm-debug.log*
 
-# ============================================
-# MOBILE REACT NATIVE (si applicable)
-# ============================================
+# PYTHON
+/venv
+/ENV
+/env
+/.venv
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+/build/
+/dist/
+/develop-eggs/
+/eggs/
+/.eggs/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Expo
+# =============================================================================
+# 2. EXPO & REACT NATIVE (FRONTEND MOBILE)
+# =============================================================================
+# Cache & Conf. Expo
 .expo/
 .expo-shared/
-dist/
-npm-debug.*
+.metro-health-check*
+expo-env.d.ts
+
+# Sorties de build
+/web-build/
+/build/
+/dist/
+/android/app/build/
+/android/build/
+/ios/build/
+/ios/Pods/
+/ios/DerivedData/
+
+# Fichiers de configuration locaux Android/iOS
+android/.gradle
+android/captures/
+android/gradlew*
+android/local.properties
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Clés de build & Secrets mobile
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
 *.mobileprovision
-*.orig.*
-web-build/
+google-services.json
+GoogleService-Info.plist
 
-# Metro
-.metro-health-check*
+# =============================================================================
+# 3. DJANGO & ENVIRONNEMENT (BACKEND)
+# =============================================================================
+# Django / Fichiers générés
+/db.sqlite3
+/db.sqlite3-journal
+/media                # Fichiers téléchargés par les utilisateurs
+/static               # Assets statiques collectés
+/staticfiles
+*.log
 
-# ============================================
-# BASES DE DONNÉES
-# ============================================
+# Fichiers Celery
+celerybeat-schedule
+celerybeat.pid
 
-# SQLite
-*.sqlite
-*.sqlite3
-*.db
+# Fichiers de traduction
+*.mo
+*.pot
 
-# PostgreSQL
-*.pgsql
-*.sql
+# =============================================================================
+# 4. SECRETS & CONFIGURATION SENSIBLE (CRITIQUE RSU)
+# =============================================================================
+# Environnement et Secrets (Règle d'or : ignorer TOUT .env sauf l'exemple)
+.env
+.env.*
+!*.env.example
+!*.env.template
 
-# MySQL
-*.mysql
-
-# ============================================
-# SECRETS & CREDENTIALS
-# ============================================
-
-# Clés API et secrets
+# Configuration sensible non standard
 secrets/
 *.pem
-*.key
-*.crt
-*.p12
 *.pfx
-*.jks
-*.keystore
-
-# Configuration sensible
 config/secrets.yml
 config/database.yml
-.env.*
-!.env.example
-
-# Tokens et credentials
-*.token
 credentials.json
 service-account.json
+data/sensitive/
 
-# ============================================
-# FICHIERS SYSTÈME
-# ============================================
+# Dumps de base de données
+*.dump
+*.sql
+*.sql.gz
+*.psql.gz
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# =============================================================================
+# 5. IDES, CACHE DE DÉV. & TESTS
+# =============================================================================
+# IDEs (VSCode, IntelliJ, PyCharm, etc.)
+.vscode/
+.idea/
+*.iml
+*.iws
+*.code-workspace
+
+# Cache divers
+.cache/
+.tox/
+.nox/
+.pytest_cache/
+.sentryclirc
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_*/
+
+# Rapports de couverture
+/coverage/
+.coverage*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+
+# =============================================================================
+# 6. SYSTÈME D'EXPLOITATION & TEMPORAIRE
+# =============================================================================
+# Windows
+Thumbs.db
+ehthumbs*.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
 
 # macOS
 .DS_Store
 .AppleDouble
 .LSOverride
-Icon
+Icon?
 ._*
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
 
-# Windows
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
-*.stackdump
-[Dd]esktop.ini
-$RECYCLE.BIN/
-*.cab
-*.msi
-*.msix
-*.msm
-*.msp
-*.lnk
-
-# Linux
+# Temporaires et Backups
 *~
-.fuse_hidden*
-.directory
-.Trash-*
-.nfs*
-
-# ============================================
-# DOCUMENTATION & RAPPORTS
-# ============================================
-
-# Documentation générée
-docs/_build/
-docs/.doctrees/
-site/
-
-# Rapports
-reports/
-*.report
-*.xlsx
-*.xls
-*.csv
-!**/sample_data/*.csv
-
-# ============================================
-# TESTS & CI/CD
-# ============================================
-
-# Test output
-test-results/
-test-reports/
-*.test.log
-
-# CI/CD
-.github/workflows/*.local.yml
-
-# ============================================
-# BACKUP & TEMPORARY
-# ============================================
-
-# Backups
+\#*\#
 *.bak
 *.backup
 *.old
 *.orig
 *.swp
 *.swo
-*~
-
-# Temporary
-tmp/
-temp/
+/tmp/
+/temp/
 *.tmp
 *.temp
 
-# Logs
-logs/
-*.log
-
-# ============================================
-# MEDIA & UPLOADS
-# ============================================
-
-# User uploads (développement)
-media/uploads/
-media/temp/
-
-# Images temporaires
-*.orig.jpg
-*.orig.png
-
-# ============================================
-# SPÉCIFIQUE RSU GABON
-# ============================================
-
-# Données de test sensibles
-**/test_data_sensitive/
-**/fixtures_prod/
-
-# Scripts de migration one-time
-**/migrations_backup/
-
-# Documentation interne confidentielle
-docs/internal/
-docs/confidential/
-
-# Certificats SSL locaux
-certificates/
-
-# Dumps base de données
-*.dump
-*.sql.gz
-*.psql.gz
-
-# ============================================
-# KEEP THESE (Exceptions)
-# ============================================
-
-# Garder certains fichiers importants
+# =============================================================================
+# 7. EXCEPTIONS (Fichiers à conserver)
+# =============================================================================
+# Règles inversées pour garder certains fichiers ignorés par les règles larges ci-dessus
 !.gitkeep
-!.env.example
-!.env.template
 !README.md
 !LICENSE
-!.github/workflows/
+!CHANGELOG.md
 
-# Garder fixtures de démo
+# Garder les templates d'environnement et les configurations essentielles
+!package.json
+!package-lock.json
+!yarn.lock
+!.env.example
+!.env.template
+
+# Garder les fixtures de démo (si nécessaire)
 !**/fixtures/demo_*.json
 
-# Garder migrations initiales
+# Garder les migrations initiales (souvent nécessaires pour le setup)
 !**/migrations/0001_initial.py
-!**/migrations/__init__
+!**/migrations/__init__.py
