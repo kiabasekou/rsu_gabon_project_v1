@@ -1,104 +1,71 @@
 // =============================================================================
-// 1. API CLIENT SERVICE (services/api/apiClient.js)
+// SERVICES MOBILE RSU GABON
 // =============================================================================
-import axios from 'axios';
+
+// =============================================================================
+// 1. API CLIENT (services/api/apiClient.js)
+// =============================================================================
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import NetInfo from '@react-native-community/netinfo';
 
-const API_BASE_URL = __DEV__ 
-  ? 'http://localhost:8000/api/v1'
-  : 'https://api.rsu.gouv.ga/api/v1';
+const BASE_URL = __DEV__ 
+  ? 'http://localhost:8000/api/v1' 
+  : 'https://rsu-api.gouv.ga/api/v1';
 
-class APIClient {
-  constructor() {
-    this.client = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+const apiClient = axios.create({
+  baseURL: BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+});
 
-    // Intercepteur requêtes - Ajout JWT automatique
-    this.client.interceptors.request.use(
-      async (config) => {
-        const token = await AsyncStorage.getItem('access_token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+// Intercepteur pour ajouter token JWT automatiquement
+apiClient.interceptors.request.use(
+  async (config) => {
+    const token = await AsyncStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Intercepteur pour gérer refresh token
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = await AsyncStorage.getItem('refresh_token');
+        if (refreshToken) {
+          const response = await axios.post(`${BASE_URL}/auth/token/refresh/`, {
+            refresh: refreshToken,
+          });
+
+          const { access } = response.data;
+          await AsyncStorage.setItem('access_token', access);
+
+          originalRequest.headers.Authorization = `Bearer ${access}`;
+          return apiClient(originalRequest);
         }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Intercepteur réponses - Gestion refresh token
-    this.client.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        const originalRequest = error.config;
-
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true;
-
-          try {
-            const refreshToken = await AsyncStorage.getItem('refresh_token');
-            const response = await axios.post(
-              `${API_BASE_URL}/auth/token/refresh/`,
-              { refresh: refreshToken }
-            );
-
-            const { access } = response.data;
-            await AsyncStorage.setItem('access_token', access);
-
-            originalRequest.headers.Authorization = `Bearer ${access}`;
-            return this.client(originalRequest);
-          } catch (refreshError) {
-            // Déconnexion si refresh échoue
-            await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user']);
-            // Navigation vers login
-            return Promise.reject(refreshError);
-          }
-        }
-
-        return Promise.reject(error);
+      } catch (refreshError) {
+        // Token refresh échoué, rediriger vers login
+        await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user']);
+        // Déclencher logout dans l'app
       }
-    );
-  }
+    }
 
-  // Méthodes CRUD génériques
-  get(url, params = {}) {
-    return this.client.get(url, { params });
+    return Promise.reject(error);
   }
+);
 
-  post(url, data) {
-    return this.client.post(url, data);
-  }
+export default apiClient;
 
-  put(url, data) {
-    return this.client.put(url, data);
-  }
-
-  patch(url, data) {
-    return this.client.patch(url, data);
-  }
-
-  delete(url) {
-    return this.client.delete(url);
-  }
-
-  // Upload avec progression
-  upload(url, formData, onProgress) {
-    return this.client.post(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent) => {
-        const percentCompleted = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total
-        );
-        if (onProgress) onProgress(percentCompleted);
-      },
-    });
-  }
-}
-
-export default new APIClient();

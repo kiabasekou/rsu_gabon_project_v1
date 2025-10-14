@@ -1,127 +1,124 @@
 // =============================================================================
-// 7. VALIDATION SERVICE (services/validation/validationService.js)
+// 3. VALIDATION SERVICE (services/validation/validationService.js)
 // =============================================================================
-
 class ValidationService {
-  // Valider NIP gabonais
+  // Validation NIP gabonais (10 chiffres)
   validateNIP(nip) {
-    if (!nip) return { valid: false, error: 'NIP requis' };
+    if (!nip) {
+      return { valid: false, error: 'NIP requis' };
+    }
 
-    // Format: 10-14 chiffres
-    const nipRegex = /^\d{10,14}$/;
+    const nipRegex = /^[0-9]{10}$/;
     if (!nipRegex.test(nip)) {
-      return {
-        valid: false,
-        error: 'NIP invalide (10-14 chiffres requis)',
-      };
+      return { valid: false, error: 'NIP doit contenir exactement 10 chiffres' };
+    }
+
+    // Vérification checksum simple (algorithme Luhn adapté)
+    if (!this.validateNIPChecksum(nip)) {
+      return { valid: false, error: 'NIP invalide (checksum incorrect)' };
     }
 
     return { valid: true };
   }
 
-  // Valider téléphone gabonais
-  validatePhone(phone) {
-    if (!phone) return { valid: true }; // Optionnel
-
-    // Format: +241 XX XX XX XX ou 0X XX XX XX XX
-    const phoneRegex = /^(\+241|0)[1-7]\d{7}$/;
-    const cleaned = phone.replace(/\s/g, '');
-
-    if (!phoneRegex.test(cleaned)) {
-      return {
-        valid: false,
-        error: 'Téléphone invalide (format: +241 XX XX XX XX)',
-      };
+  validateNIPChecksum(nip) {
+    // Implémentation basique - à adapter selon algorithme réel RBPP Gabon
+    const digits = nip.split('').map(Number);
+    let sum = 0;
+    
+    for (let i = 0; i < 9; i++) {
+      let digit = digits[i];
+      if (i % 2 === 1) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+      sum += digit;
     }
-
-    return { valid: true, normalized: cleaned };
+    
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return checkDigit === digits[9];
   }
 
-  // Valider date de naissance
-  validateBirthDate(dateString) {
-    if (!dateString) return { valid: false, error: 'Date requise' };
-
-    const date = new Date(dateString);
-    const now = new Date();
-
-    if (isNaN(date.getTime())) {
-      return { valid: false, error: 'Date invalide' };
+  // Validation téléphone gabonais
+  validatePhone(phone) {
+    if (!phone) {
+      return { valid: false, error: 'Numéro de téléphone requis' };
     }
 
-    const age = (now - date) / (1000 * 60 * 60 * 24 * 365.25);
+    // Formats acceptés: +24101234567, 24101234567, 01234567
+    const phoneRegex = /^(\+241|241)?[0-9]{8}$/;
+    
+    if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+      return { valid: false, error: 'Format téléphone gabonais invalide' };
+    }
 
-    if (age < 0) {
-      return { valid: false, error: 'Date dans le futur' };
+    // Vérifier préfixes valides pour le Gabon
+    const cleanPhone = phone.replace(/(\+241|241|\s)/g, '');
+    const validPrefixes = ['01', '02', '03', '04', '05', '06', '07', '08', '09']; // Opérateurs Gabon
+    
+    const prefix = cleanPhone.substring(0, 2);
+    if (!validPrefixes.includes(prefix)) {
+      return { valid: false, error: 'Préfixe téléphonique gabonais invalide' };
+    }
+
+    return { valid: true };
+  }
+
+  // Validation date de naissance
+  validateBirthDate(birthDate) {
+    if (!birthDate) {
+      return { valid: false, error: 'Date de naissance requise' };
+    }
+
+    const date = new Date(birthDate);
+    const now = new Date();
+    const age = Math.floor((now - date) / (365.25 * 24 * 60 * 60 * 1000));
+
+    if (date > now) {
+      return { valid: false, error: 'Date de naissance ne peut être dans le futur' };
     }
 
     if (age > 120) {
-      return { valid: false, error: 'Âge trop élevé' };
+      return { valid: false, error: 'Âge non réaliste (plus de 120 ans)' };
     }
 
-    return { valid: true, age: Math.floor(age) };
+    if (age < 0) {
+      return { valid: false, error: 'Date de naissance invalide' };
+    }
+
+    return { valid: true, age };
   }
 
-  // Valider formulaire complet
-  validateEnrollmentForm(formData) {
-    const errors = {};
-
-    // Champs obligatoires
-    if (!formData.firstName?.trim()) {
-      errors.firstName = 'Prénom requis';
+  // Validation email
+  validateEmail(email) {
+    if (!email) {
+      return { valid: true }; // Email optionnel
     }
 
-    if (!formData.lastName?.trim()) {
-      errors.lastName = 'Nom requis';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { valid: false, error: 'Format email invalide' };
     }
 
-    if (!formData.gender) {
-      errors.gender = 'Sexe requis';
+    return { valid: true };
+  }
+
+  // Validation revenu mensuel
+  validateMonthlyIncome(income) {
+    const numIncome = parseFloat(income);
+    
+    if (isNaN(numIncome) || numIncome < 0) {
+      return { valid: false, error: 'Revenu doit être un nombre positif' };
     }
 
-    // Validation NIP
-    if (formData.nip) {
-      const nipValidation = this.validateNIP(formData.nip);
-      if (!nipValidation.valid) {
-        errors.nip = nipValidation.error;
-      }
+    // Vérification limites réalistes pour le Gabon (en FCFA)
+    if (numIncome > 10000000) { // 10M FCFA
+      return { valid: false, error: 'Revenu semble trop élevé' };
     }
 
-    // Validation date naissance
-    const birthValidation = this.validateBirthDate(formData.birthDate);
-    if (!birthValidation.valid) {
-      errors.birthDate = birthValidation.error;
-    }
-
-    // Validation téléphone
-    if (formData.phone) {
-      const phoneValidation = this.validatePhone(formData.phone);
-      if (!phoneValidation.valid) {
-        errors.phone = phoneValidation.error;
-      }
-    }
-
-    // Validation province
-    const validProvinces = [
-      'Estuaire',
-      'Haut-Ogooué',
-      'Moyen-Ogooué',
-      'Ngounié',
-      'Nyanga',
-      'Ogooué-Ivindo',
-      'Ogooué-Lolo',
-      'Ogooué-Maritime',
-      'Woleu-Ntem',
-    ];
-
-    if (!validProvinces.includes(formData.province)) {
-      errors.province = 'Province invalide';
-    }
-
-    return {
-      isValid: Object.keys(errors).length === 0,
-      errors,
-    };
+    return { valid: true };
   }
 }
 
 export default new ValidationService();
+
