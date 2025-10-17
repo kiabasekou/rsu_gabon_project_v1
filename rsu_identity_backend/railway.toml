@@ -1,0 +1,8 @@
+# Créer railway.toml dans le projet
+[build]
+  builder = "dockerfile"
+
+[deploy]
+  healthcheckPath = "/api/"
+  healthcheckTimeout = 100
+  restartPolicyType = "on_failure"
