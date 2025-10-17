@@ -26,6 +26,9 @@ from django.http import JsonResponse
 def health_check(request):
     return JsonResponse({"status": "healthy", "service": "RSU Gabon Backend"})
 
+def simple_health(request):
+    return JsonResponse({"status": "ok", "message": "Railway test"})
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def api_root(request):
