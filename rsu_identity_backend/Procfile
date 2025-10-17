@@ -1,0 +1,1 @@
+"web: gunicorn rsu_identity.wsgi --log-file -" 
