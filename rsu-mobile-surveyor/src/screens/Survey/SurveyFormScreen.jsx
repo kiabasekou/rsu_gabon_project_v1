@@ -1,5 +1,6 @@
+
 // =============================================================================
-// 2. SURVEY FORM SCREEN (screens/Survey/SurveyFormScreen.jsx)
+// 2. SurveyFormScreen.jsx - NOUVEAU FICHIER  
 // =============================================================================
 import React, { useState, useEffect } from 'react';
 import {
@@ -16,430 +17,211 @@ import {
   TextInput,
   RadioButton,
   Checkbox,
-  Chip,
-  FAB,
-  List,
-  Avatar,
   ProgressBar,
-  Surface,
+  Chip,
+  List,
+  Divider,
 } from 'react-native-paper';
-import { Formik } from 'formik';
-import * as Yup from 'yup';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 import apiClient from '../../services/api/apiClient';
-import gpsService from '../../services/gps/gpsService';
-import syncService from '../../services/sync/syncService';
+import validationService from '../../services/validation/validationService';
 
 const SURVEY_TEMPLATES = {
-  HOUSEHOLD_VERIFICATION: {
-    id: 'household_verification',
-    title: '🏠 Vérification Ménage',
-    description: 'Vérification données ménage sur terrain',
+  vulnerability_assessment: {
+    title: 'Évaluation de vulnérabilité',
+    description: 'Enquête complète sur la situation socio-économique',
     sections: [
       {
-        id: 'composition',
-        title: 'Composition Ménage',
-        fields: [
-          {
-            id: 'members_count',
-            type: 'number',
-            label: 'Nombre réel de membres du ménage',
-            required: true,
-            validation: { min: 1, max: 20 },
-          },
-          {
-            id: 'head_present',
-            type: 'radio',
-            label: 'Chef de ménage présent ?',
-            required: true,
-            options: [
-              { value: 'yes', label: 'Oui, présent' },
-              { value: 'no', label: 'Non, absent' },
-              { value: 'changed', label: 'Changement de chef' },
-            ],
-          },
-          {
-            id: 'members_changes',
-            type: 'textarea',
-            label: 'Changements depuis dernière visite',
-            required: false,
-          },
-        ],
+        title: 'Situation économique',
+        questions: [
+          { id: 'income_monthly', type: 'number', label: 'Revenus mensuels (FCFA)', required: true },
+          { id: 'employment_status', type: 'radio', label: 'Statut emploi', options: ['Employé', 'Chômeur', 'Indépendant', 'Retraité'], required: true },
+          { id: 'household_size', type: 'number', label: 'Taille du ménage', required: true },
+        ]
       },
       {
-        id: 'living_conditions',
-        title: 'Conditions de Vie',
-        fields: [
-          {
-            id: 'housing_state',
-            type: 'radio',
-            label: 'État du logement',
-            required: true,
-            options: [
-              { value: 'good', label: 'Bon état' },
-              { value: 'fair', label: 'État moyen' },
-              { value: 'poor', label: 'Mauvais état' },
-              { value: 'critical', label: 'État critique' },
-            ],
-          },
-          {
-            id: 'utilities',
-            type: 'checkbox',
-            label: 'Services disponibles',
-            required: false,
-            options: [
-              { value: 'electricity', label: 'Électricité' },
-              { value: 'water', label: 'Eau courante' },
-              { value: 'internet', label: 'Internet' },
-              { value: 'phone', label: 'Téléphone fixe' },
-            ],
-          },
-        ],
+        title: 'Conditions de logement',
+        questions: [
+          { id: 'housing_type', type: 'radio', label: 'Type de logement', options: ['Maison', 'Appartement', 'Chambre', 'Autre'], required: true },
+          { id: 'water_access', type: 'radio', label: 'Accès à l\'eau', options: ['Robinet', 'Puits', 'Rivière', 'Autre'], required: true },
+          { id: 'electricity_access', type: 'checkbox', label: 'Accès électricité', required: false },
+        ]
       },
-    ],
+      {
+        title: 'Santé et éducation',
+        questions: [
+          { id: 'health_issues', type: 'checkbox', label: 'Problèmes de santé chroniques', required: false },
+          { id: 'education_level', type: 'radio', label: 'Niveau d\'éducation', options: ['Aucun', 'Primaire', 'Secondaire', 'Supérieur'], required: true },
+          { id: 'children_school', type: 'number', label: 'Enfants scolarisés', required: false },
+        ]
+      }
+    ]
   },
-  VULNERABILITY_UPDATE: {
-    id: 'vulnerability_update',
-    title: '⚠️ Mise à jour Vulnérabilité',
-    description: 'Évaluation terrain facteurs vulnérabilité',
+  basic_registration: {
+    title: 'Inscription de base',
+    description: 'Collecte des informations essentielles',
     sections: [
       {
-        id: 'economic_status',
-        title: 'Situation Économique',
-        fields: [
-          {
-            id: 'employment_change',
-            type: 'radio',
-            label: 'Changement situation emploi ?',
-            required: true,
-            options: [
-              { value: 'improved', label: 'Amélioration' },
-              { value: 'same', label: 'Inchangée' },
-              { value: 'worsened', label: 'Dégradation' },
-            ],
-          },
-          {
-            id: 'income_sources',
-            type: 'checkbox',
-            label: 'Sources de revenus actuelles',
-            required: true,
-            options: [
-              { value: 'salary', label: 'Salaire fixe' },
-              { value: 'informal', label: 'Activités informelles' },
-              { value: 'agriculture', label: 'Agriculture' },
-              { value: 'assistance', label: 'Aide sociale' },
-              { value: 'remittances', label: 'Transferts famille' },
-              { value: 'none', label: 'Aucun revenu' },
-            ],
-          },
-        ],
-      },
-      {
-        id: 'social_situation',
-        title: 'Situation Sociale',
-        fields: [
-          {
-            id: 'health_issues',
-            type: 'radio',
-            label: 'Problèmes de santé dans le ménage ?',
-            required: true,
-            options: [
-              { value: 'none', label: 'Aucun' },
-              { value: 'minor', label: 'Problèmes mineurs' },
-              { value: 'serious', label: 'Problèmes graves' },
-              { value: 'chronic', label: 'Maladies chroniques' },
-            ],
-          },
-          {
-            id: 'education_access',
-            type: 'radio',
-            label: 'Enfants scolarisés ?',
-            required: false,
-            options: [
-              { value: 'all', label: 'Tous scolarisés' },
-              { value: 'partial', label: 'Partiellement' },
-              { value: 'none', label: 'Aucun scolarisé' },
-              { value: 'no_children', label: 'Pas d\'enfants' },
-            ],
-          },
-        ],
-      },
-    ],
+        title: 'Informations de base',
+        questions: [
+          { id: 'confirm_identity', type: 'checkbox', label: 'Confirmer identité', required: true },
+          { id: 'contact_preferred', type: 'radio', label: 'Contact préféré', options: ['Téléphone', 'SMS', 'Email', 'Visite'], required: true },
+          { id: 'emergency_contact', type: 'text', label: 'Contact d\'urgence', required: false },
+        ]
+      }
+    ]
   },
-  PROGRAM_IMPACT: {
-    id: 'program_impact',
-    title: '📊 Impact Programmes',
-    description: 'Évaluation impact programmes sociaux reçus',
+  program_eligibility: {
+    title: 'Éligibilité aux programmes',
+    description: 'Évaluation pour les programmes sociaux',
     sections: [
       {
-        id: 'program_reception',
-        title: 'Réception Programmes',
-        fields: [
-          {
-            id: 'received_programs',
-            type: 'checkbox',
-            label: 'Programmes sociaux reçus',
-            required: true,
-            options: [
-              { value: 'cash_transfer', label: 'Transferts monétaires' },
-              { value: 'food_assistance', label: 'Aide alimentaire' },
-              { value: 'health_coverage', label: 'Couverture santé' },
-              { value: 'education_support', label: 'Aide éducation' },
-              { value: 'housing_assistance', label: 'Aide logement' },
-              { value: 'none', label: 'Aucun programme reçu' },
-            ],
-          },
-          {
-            id: 'program_satisfaction',
-            type: 'radio',
-            label: 'Satisfaction globale programmes',
-            required: false,
-            options: [
-              { value: 'very_satisfied', label: 'Très satisfait' },
-              { value: 'satisfied', label: 'Satisfait' },
-              { value: 'neutral', label: 'Neutre' },
-              { value: 'dissatisfied', label: 'Insatisfait' },
-              { value: 'very_dissatisfied', label: 'Très insatisfait' },
-            ],
-          },
-        ],
-      },
-      {
-        id: 'impact_assessment',
-        title: 'Évaluation Impact',
-        fields: [
-          {
-            id: 'life_improvement',
-            type: 'radio',
-            label: 'Les programmes ont-ils amélioré votre situation ?',
-            required: true,
-            options: [
-              { value: 'significantly', label: 'Amélioration significative' },
-              { value: 'moderately', label: 'Amélioration modérée' },
-              { value: 'slightly', label: 'Légère amélioration' },
-              { value: 'no_change', label: 'Aucun changement' },
-              { value: 'worsened', label: 'Situation dégradée' },
-            ],
-          },
-          {
-            id: 'priority_needs',
-            type: 'checkbox',
-            label: 'Besoins prioritaires actuels',
-            required: true,
-            options: [
-              { value: 'food', label: 'Alimentation' },
-              { value: 'healthcare', label: 'Soins de santé' },
-              { value: 'housing', label: 'Logement' },
-              { value: 'education', label: 'Éducation enfants' },
-              { value: 'employment', label: 'Emploi/Formation' },
-              { value: 'utilities', label: 'Électricité/Eau' },
-            ],
-          },
-          {
-            id: 'additional_comments',
-            type: 'textarea',
-            label: 'Commentaires additionnels',
-            required: false,
-            placeholder: 'Observations, suggestions, difficultés rencontrées...',
-          },
-        ],
-      },
-    ],
-  },
+        title: 'Critères d\'éligibilité',
+        questions: [
+          { id: 'disability_status', type: 'checkbox', label: 'Situation de handicap', required: false },
+          { id: 'pregnant_women', type: 'number', label: 'Femmes enceintes dans le ménage', required: false },
+          { id: 'elderly_count', type: 'number', label: 'Personnes âgées (65+)', required: false },
+          { id: 'children_under5', type: 'number', label: 'Enfants de moins de 5 ans', required: false },
+        ]
+      }
+    ]
+  }
 };
 
-export default function SurveyFormScreen({ navigation }) {
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const [surveyData, setSurveyData] = useState({});
+export default function SurveyFormScreen({ route, navigation }) {
+  const { personId, surveyType = 'vulnerability_assessment' } = route.params || {};
+  const [selectedTemplate, setSelectedTemplate] = useState(surveyType);
+  const [responses, setResponses] = useState({});
   const [currentSection, setCurrentSection] = useState(0);
-  const [gpsData, setGpsData] = useState(null);
-  const [gpsLoading, setGpsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [savedSurveys, setSavedSurveys] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [person, setPerson] = useState(null);
+
+  const template = SURVEY_TEMPLATES[selectedTemplate];
+  const totalSections = template?.sections?.length || 0;
+  const progress = totalSections > 0 ? (currentSection + 1) / totalSections : 0;
 
   useEffect(() => {
-    loadSavedSurveys();
-  }, []);
+    if (personId) {
+      loadPersonData();
+    }
+  }, [personId]);
 
-  const loadSavedSurveys = async () => {
+  const loadPersonData = async () => {
     try {
-      // Charger enquêtes sauvegardées localement
-      const pendingData = await syncService.getPendingData();
-      const surveys = pendingData.filter(item => item.type === 'survey');
-      setSavedSurveys(surveys);
+      const response = await apiClient.get(`/identity/persons/${personId}/`);
+      setPerson(response.data);
     } catch (error) {
-      console.error('Erreur chargement enquêtes:', error);
+      console.error('Erreur chargement personne:', error);
     }
   };
 
-  const captureGPS = async () => {
-    setGpsLoading(true);
-    try {
-      const location = await gpsService.getCurrentPosition();
-      setGpsData(location);
-      Alert.alert('GPS Capturé', 'Position enregistrée avec succès');
-    } catch (error) {
-      Alert.alert('Erreur GPS', 'Impossible de capturer la position');
-    } finally {
-      setGpsLoading(false);
-    }
-  };
-
-  const handleTemplateSelect = (template) => {
-    setSelectedTemplate(template);
-    setSurveyData({});
-    setCurrentSection(0);
-    setGpsData(null);
-  };
-
-  const handleFieldChange = (fieldId, value) => {
-    setSurveyData(prev => ({
+  const handleResponseChange = (questionId, value) => {
+    setResponses(prev => ({
       ...prev,
-      [fieldId]: value,
+      [questionId]: value
     }));
   };
 
-  const nextSection = () => {
-    if (currentSection < selectedTemplate.sections.length - 1) {
-      setCurrentSection(currentSection + 1);
-    }
-  };
-
-  const prevSection = () => {
-    if (currentSection > 0) {
-      setCurrentSection(currentSection - 1);
-    }
-  };
-
   const validateCurrentSection = () => {
-    const section = selectedTemplate.sections[currentSection];
-    const requiredFields = section.fields.filter(field => field.required);
+    const currentSectionData = template.sections[currentSection];
+    const requiredQuestions = currentSectionData.questions.filter(q => q.required);
     
-    for (const field of requiredFields) {
-      if (!surveyData[field.id] || 
-          (Array.isArray(surveyData[field.id]) && surveyData[field.id].length === 0)) {
-        Alert.alert('Validation', `Le champ "${field.label}" est requis`);
+    for (const question of requiredQuestions) {
+      if (!responses[question.id]) {
+        Alert.alert('Champ requis', `Le champ "${question.label}" est obligatoire`);
         return false;
       }
     }
     return true;
   };
 
-  const handleNext = () => {
+  const handleNextSection = () => {
     if (validateCurrentSection()) {
-      nextSection();
+      if (currentSection < totalSections - 1) {
+        setCurrentSection(currentSection + 1);
+      } else {
+        handleSubmitSurvey();
+      }
     }
   };
 
-  const submitSurvey = async () => {
-    if (!validateCurrentSection()) return;
-    if (!gpsData) {
-      Alert.alert('GPS Requis', 'Veuillez capturer votre position GPS avant de soumettre');
-      return;
+  const handlePreviousSection = () => {
+    if (currentSection > 0) {
+      setCurrentSection(currentSection - 1);
     }
+  };
 
-    setIsSubmitting(true);
+  const handleSubmitSurvey = async () => {
     try {
-      const surveyPayload = {
-        template_id: selectedTemplate.id,
-        template_title: selectedTemplate.title,
-        data: surveyData,
-        gps_data: gpsData,
-        timestamp: new Date().toISOString(),
-        surveyor_notes: surveyData.additional_comments || '',
+      setLoading(true);
+
+      const surveyData = {
+        person_id: personId,
+        survey_type: selectedTemplate,
+        responses: responses,
+        completed_at: new Date().toISOString(),
       };
 
-      // Tentative soumission en ligne ou sauvegarde offline
-      try {
-        const response = await apiClient.post('/surveys/submit/', surveyPayload);
-        Alert.alert(
-          'Enquête Soumise',
-          'L\'enquête a été enregistrée avec succès',
-          [
-            {
-              text: 'Nouvelle Enquête',
-              onPress: () => {
-                setSelectedTemplate(null);
-                setSurveyData({});
-                setGpsData(null);
-              }
-            },
-            {
-              text: 'Retour',
-              onPress: () => navigation.goBack()
-            }
-          ]
-        );
-      } catch (error) {
-        // Sauvegarde offline
-        await syncService.saveOffline({
-          type: 'survey',
-          data: surveyPayload,
-        });
-        
-        Alert.alert(
-          'Enquête Sauvegardée',
-          'L\'enquête a été sauvegardée hors ligne et sera synchronisée dès la reconnexion',
-          [{ text: 'OK', onPress: () => setSelectedTemplate(null) }]
-        );
-      }
+      await apiClient.post('/surveys/responses/', surveyData);
+      
+      Alert.alert(
+        'Enquête terminée',
+        'L\'enquête a été sauvegardée avec succès',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+
     } catch (error) {
+      console.error('Erreur sauvegarde enquête:', error);
       Alert.alert('Erreur', 'Impossible de sauvegarder l\'enquête');
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const renderField = (field) => {
-    switch (field.type) {
+  const renderQuestion = (question) => {
+    const value = responses[question.id];
+
+    switch (question.type) {
       case 'text':
-      case 'number':
         return (
           <TextInput
-            key={field.id}
-            label={field.label + (field.required ? ' *' : '')}
-            value={surveyData[field.id] || ''}
-            onChangeText={(value) => handleFieldChange(field.id, value)}
-            keyboardType={field.type === 'number' ? 'numeric' : 'default'}
             mode="outlined"
-            style={styles.fieldInput}
-            placeholder={field.placeholder}
+            label={question.label + (question.required ? ' *' : '')}
+            value={value || ''}
+            onChangeText={(text) => handleResponseChange(question.id, text)}
+            style={styles.input}
           />
         );
 
-      case 'textarea':
+      case 'number':
         return (
           <TextInput
-            key={field.id}
-            label={field.label + (field.required ? ' *' : '')}
-            value={surveyData[field.id] || ''}
-            onChangeText={(value) => handleFieldChange(field.id, value)}
             mode="outlined"
-            multiline
-            numberOfLines={3}
-            style={styles.fieldInput}
-            placeholder={field.placeholder}
+            label={question.label + (question.required ? ' *' : '')}
+            value={value?.toString() || ''}
+            onChangeText={(text) => handleResponseChange(question.id, parseInt(text) || 0)}
+            keyboardType="numeric"
+            style={styles.input}
           />
         );
 
       case 'radio':
         return (
-          <View key={field.id} style={styles.fieldContainer}>
-            <Paragraph style={styles.fieldLabel}>
-              {field.label}{field.required && ' *'}
+          <View style={styles.radioGroup}>
+            <Paragraph style={styles.questionLabel}>
+              {question.label + (question.required ? ' *' : '')}
             </Paragraph>
             <RadioButton.Group
-              onValueChange={(value) => handleFieldChange(field.id, value)}
-              value={surveyData[field.id] || ''}
+              onValueChange={(value) => handleResponseChange(question.id, value)}
+              value={value || ''}
             >
-              {field.options.map(option => (
-                <View key={option.value} style={styles.radioOption}>
-                  <RadioButton value={option.value} />
-                  <Paragraph style={styles.radioLabel}>{option.label}</Paragraph>
-                </View>
+              {question.options.map((option, index) => (
+                <RadioButton.Item
+                  key={index}
+                  label={option}
+                  value={option}
+                  style={styles.radioItem}
+                />
               ))}
             </RadioButton.Group>
           </View>
@@ -447,25 +229,12 @@ export default function SurveyFormScreen({ navigation }) {
 
       case 'checkbox':
         return (
-          <View key={field.id} style={styles.fieldContainer}>
-            <Paragraph style={styles.fieldLabel}>
-              {field.label}{field.required && ' *'}
-            </Paragraph>
-            {field.options.map(option => (
-              <View key={option.value} style={styles.checkboxOption}>
-                <Checkbox
-                  status={(surveyData[field.id] || []).includes(option.value) ? 'checked' : 'unchecked'}
-                  onPress={() => {
-                    const currentValues = surveyData[field.id] || [];
-                    const newValues = currentValues.includes(option.value)
-                      ? currentValues.filter(v => v !== option.value)
-                      : [...currentValues, option.value];
-                    handleFieldChange(field.id, newValues);
-                  }}
-                />
-                <Paragraph style={styles.checkboxLabel}>{option.label}</Paragraph>
-              </View>
-            ))}
+          <View style={styles.checkboxContainer}>
+            <Checkbox.Item
+              label={question.label + (question.required ? ' *' : '')}
+              status={value ? 'checked' : 'unchecked'}
+              onPress={() => handleResponseChange(question.id, !value)}
+            />
           </View>
         );
 
@@ -474,370 +243,166 @@ export default function SurveyFormScreen({ navigation }) {
     }
   };
 
-  if (!selectedTemplate) {
+  if (!template) {
     return (
-      <View style={styles.container}>
-        <ScrollView style={styles.templatesContainer}>
-          <Title style={styles.pageTitle}>📋 Enquêtes Terrain</Title>
-          
-          <Paragraph style={styles.pageDescription}>
-            Sélectionnez le type d'enquête à réaliser sur le terrain
-          </Paragraph>
-
-          {Object.values(SURVEY_TEMPLATES).map(template => (
-            <Card key={template.id} style={styles.templateCard} onPress={() => handleTemplateSelect(template)}>
-              <Card.Content>
-                <Title style={styles.templateTitle}>{template.title}</Title>
-                <Paragraph style={styles.templateDescription}>
-                  {template.description}
-                </Paragraph>
-                <View style={styles.templateInfo}>
-                  <Chip mode="outlined" style={styles.sectionsChip}>
-                    {template.sections.length} sections
-                  </Chip>
-                  <Chip mode="outlined" style={styles.fieldsChip}>
-                    {template.sections.reduce((total, section) => total + section.fields.length, 0)} questions
-                  </Chip>
-                </View>
-              </Card.Content>
-            </Card>
-          ))}
-
-          {/* Enquêtes sauvegardées */}
-          {savedSurveys.length > 0 && (
-            <Card style={styles.savedSurveysCard}>
-              <Card.Content>
-                <Title style={styles.savedTitle}>💾 Enquêtes en attente</Title>
-                <Paragraph style={styles.savedDescription}>
-                  {savedSurveys.length} enquête{savedSurveys.length > 1 ? 's' : ''} à synchroniser
-                </Paragraph>
-                {savedSurveys.slice(0, 3).map((survey, index) => (
-                  <Surface key={survey.id} style={styles.savedSurveyItem}>
-                    <View style={styles.savedSurveyContent}>
-                      <Icon name="assignment" size={24} color="#FF9800" />
-                      <View style={styles.savedSurveyInfo}>
-                        <Paragraph style={styles.savedSurveyTitle}>
-                          {survey.data.template_title}
-                        </Paragraph>
-                        <Paragraph style={styles.savedSurveyDate}>
-                          {format(new Date(survey.timestamp), 'dd/MM/yyyy HH:mm', { locale: fr })}
-                        </Paragraph>
-                      </View>
-                      <Chip mode="outlined" style={styles.pendingChip}>
-                        En attente
-                      </Chip>
-                    </View>
-                  </Surface>
-                ))}
-                <Button
-                  mode="outlined"
-                  onPress={() => navigation.navigate('Sync')}
-                  style={styles.syncButton}
-                  icon="sync"
-                >
-                  Synchroniser ({savedSurveys.length})
-                </Button>
-              </Card.Content>
-            </Card>
-          )}
-        </ScrollView>
+      <View style={styles.errorContainer}>
+        <Paragraph>Template d'enquête non trouvé</Paragraph>
+        <Button onPress={() => navigation.goBack()}>Retour</Button>
       </View>
     );
   }
 
-  const currentSectionData = selectedTemplate.sections[currentSection];
-  const progress = (currentSection + 1) / selectedTemplate.sections.length;
+  const currentSectionData = template.sections[currentSection];
 
   return (
     <View style={styles.container}>
-      {/* En-tête avec progression */}
-      <Surface style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerInfo}>
-            <Title style={styles.surveyTitle}>{selectedTemplate.title}</Title>
-            <Paragraph style={styles.sectionTitle}>
-              {currentSectionData.title} ({currentSection + 1}/{selectedTemplate.sections.length})
-            </Paragraph>
+      {/* Header avec progression */}
+      <Card style={styles.headerCard}>
+        <Card.Content>
+          <View style={styles.headerContent}>
+            <Title style={styles.surveyTitle}>{template.title}</Title>
+            {person && (
+              <Paragraph style={styles.personInfo}>
+                Pour: {person.first_name} {person.last_name}
+              </Paragraph>
+            )}
           </View>
-          <Button
-            mode="text"
-            onPress={() => setSelectedTemplate(null)}
-            icon="close"
-          >
-            Annuler
-          </Button>
-        </View>
-        <ProgressBar
-          progress={progress}
-          style={styles.progressBar}
-          color="#2E7D32"
-        />
-      </Surface>
+          <View style={styles.progressContainer}>
+            <Paragraph style={styles.progressText}>
+              Section {currentSection + 1} sur {totalSections}
+            </Paragraph>
+            <ProgressBar progress={progress} color="#2E7D32" style={styles.progressBar} />
+          </View>
+        </Card.Content>
+      </Card>
 
-      {/* Contenu section */}
-      <ScrollView style={styles.formContainer}>
+      {/* Section actuelle */}
+      <ScrollView style={styles.contentContainer}>
         <Card style={styles.sectionCard}>
           <Card.Content>
-            {currentSectionData.fields.map(field => renderField(field))}
-          </Card.Content>
-        </Card>
-
-        {/* GPS Section */}
-        <Card style={styles.gpsCard}>
-          <Card.Content>
-            <Title style={styles.gpsTitle}>📍 Localisation GPS</Title>
-            {gpsData ? (
-              <View style={styles.gpsSuccess}>
-                <Icon name="check-circle" size={24} color="#4CAF50" />
-                <View style={styles.gpsInfo}>
-                  <Paragraph>Position capturée</Paragraph>
-                  <Paragraph style={styles.gpsCoords}>
-                    {gpsData.latitude.toFixed(6)}, {gpsData.longitude.toFixed(6)}
-                  </Paragraph>
-                  <Paragraph style={styles.gpsAccuracy}>
-                    Précision: {Math.round(gpsData.accuracy)}m
-                  </Paragraph>
-                </View>
+            <Title style={styles.sectionTitle}>{currentSectionData.title}</Title>
+            
+            {currentSectionData.questions.map((question, index) => (
+              <View key={question.id} style={styles.questionContainer}>
+                {renderQuestion(question)}
               </View>
-            ) : (
-              <Button
-                mode="contained"
-                onPress={captureGPS}
-                loading={gpsLoading}
-                disabled={gpsLoading}
-                style={styles.gpsButton}
-                icon="my-location"
-              >
-                {gpsLoading ? 'Capture GPS...' : 'Capturer Position'}
-              </Button>
-            )}
+            ))}
           </Card.Content>
         </Card>
       </ScrollView>
 
-      {/* Navigation */}
-      <Surface style={styles.navigation}>
-        <Button
-          mode="outlined"
-          onPress={prevSection}
-          disabled={currentSection === 0}
-          style={styles.navButton}
-          icon="chevron-left"
-        >
-          Précédent
-        </Button>
-
-        {currentSection < selectedTemplate.sections.length - 1 ? (
-          <Button
-            mode="contained"
-            onPress={handleNext}
-            style={styles.navButton}
-            icon="chevron-right"
-          >
-            Suivant
-          </Button>
-        ) : (
-          <Button
-            mode="contained"
-            onPress={submitSurvey}
-            loading={isSubmitting}
-            disabled={isSubmitting || !gpsData}
-            style={styles.navButton}
-            icon="send"
-          >
-            {isSubmitting ? 'Soumission...' : 'Soumettre'}
-          </Button>
-        )}
-      </Surface>
+      {/* Boutons navigation */}
+      <Card style={styles.navigationCard}>
+        <Card.Content>
+          <View style={styles.navigationButtons}>
+            <Button
+              mode="outlined"
+              onPress={handlePreviousSection}
+              disabled={currentSection === 0}
+              style={styles.navButton}
+            >
+              Précédent
+            </Button>
+            
+            <Button
+              mode="contained"
+              onPress={handleNextSection}
+              loading={loading}
+              disabled={loading}
+              style={styles.navButton}
+            >
+              {currentSection === totalSections - 1 ? 'Terminer' : 'Suivant'}
+            </Button>
+          </View>
+        </Card.Content>
+      </Card>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const surveyStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  templatesContainer: {
+  errorContainer: {
     flex: 1,
-    padding: 16,
-  },
-  pageTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  pageDescription: {
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 24,
-  },
-  templateCard: {
-    marginBottom: 16,
-    elevation: 3,
-  },
-  templateTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  templateDescription: {
-    color: '#666',
-    marginBottom: 12,
-  },
-  templateInfo: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  sectionsChip: {
-    backgroundColor: '#E3F2FD',
-  },
-  fieldsChip: {
-    backgroundColor: '#E8F5E8',
-  },
-  savedSurveysCard: {
-    marginTop: 24,
-    marginBottom: 16,
-    elevation: 2,
-  },
-  savedTitle: {
-    fontSize: 18,
-    marginBottom: 8,
-  },
-  savedDescription: {
-    color: '#666',
-    marginBottom: 16,
-  },
-  savedSurveyItem: {
-    padding: 12,
-    marginBottom: 8,
-    borderRadius: 8,
-    elevation: 1,
-  },
-  savedSurveyContent: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
-  savedSurveyInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  savedSurveyTitle: {
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  savedSurveyDate: {
-    fontSize: 12,
-    color: '#666',
-  },
-  pendingChip: {
-    backgroundColor: '#FFF3E0',
-  },
-  syncButton: {
-    marginTop: 12,
-  },
-  header: {
+  headerCard: {
+    margin: 16,
+    marginBottom: 8,
     elevation: 4,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
   },
   headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: 12,
-  },
-  headerInfo: {
-    flex: 1,
   },
   surveyTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    color: '#2E7D32',
   },
-  sectionTitle: {
+  personInfo: {
     color: '#666',
+    fontStyle: 'italic',
+  },
+  progressContainer: {
+    marginTop: 8,
+  },
+  progressText: {
     fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
   },
   progressBar: {
     height: 6,
     borderRadius: 3,
   },
-  formContainer: {
+  contentContainer: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
   },
   sectionCard: {
-    marginBottom: 16,
+    marginBottom: 8,
     elevation: 2,
   },
-  fieldContainer: {
-    marginBottom: 20,
+  sectionTitle: {
+    fontSize: 18,
+    marginBottom: 16,
+    color: '#2E7D32',
   },
-  fieldLabel: {
+  questionContainer: {
+    marginBottom: 16,
+  },
+  input: {
+    marginBottom: 8,
+  },
+  questionLabel: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: 8,
     color: '#333',
   },
-  fieldInput: {
-    marginBottom: 16,
-  },
-  radioOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  radioGroup: {
     marginBottom: 8,
   },
-  radioLabel: {
-    marginLeft: 8,
-    flex: 1,
+  radioItem: {
+    paddingVertical: 4,
   },
-  checkboxOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  checkboxContainer: {
     marginBottom: 8,
   },
-  checkboxLabel: {
-    marginLeft: 8,
-    flex: 1,
+  navigationCard: {
+    margin: 16,
+    marginTop: 8,
+    elevation: 4,
   },
-  gpsCard: {
-    marginBottom: 16,
-    elevation: 2,
-  },
-  gpsTitle: {
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  gpsSuccess: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  gpsInfo: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  gpsCoords: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    color: '#666',
-  },
-  gpsAccuracy: {
-    fontSize: 12,
-    color: '#666',
-  },
-  gpsButton: {
-    alignSelf: 'flex-start',
-  },
-  navigation: {
+  navigationButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 16,
-    elevation: 8,
+    gap: 12,
   },
   navButton: {
-    flex: 0.45,
+    flex: 1,
   },
 });

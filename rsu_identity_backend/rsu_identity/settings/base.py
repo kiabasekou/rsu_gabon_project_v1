@@ -4,14 +4,15 @@ Standards Top 1% - Sécurité & Performance
 """
 import os
 from pathlib import Path
-from decouple import config
-DEBUG = config('DEBUG', default=True, cast=bool)
+
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-rsu-gabon-secret-key-windows-2024')
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='dev-rsu-gabon-secret-key-windows-2024')
+
 
 # Application definition
 DJANGO_APPS = [

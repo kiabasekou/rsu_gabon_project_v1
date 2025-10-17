@@ -7,6 +7,8 @@ import {
   ScrollView,
   RefreshControl,
   StyleSheet,
+  // CORRECTION 1: Image n'est plus nécessaire ici après la suppression de DashboardHeader.
+  // Si vous voulez l'utiliser dans le futur: Image,
 } from 'react-native';
 import {
   Card,
@@ -17,15 +19,36 @@ import {
   Chip,
   List,
   Divider,
-  ProgressBar,
 } from 'react-native-paper';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 import authService from '../../services/auth/authService';
 import syncService from '../../services/sync/syncService';
 import apiClient from '../../services/api/apiClient';
+
+
+// Définition du composant Icon pour utiliser MaterialCommunityIcons partout où <Icon> est utilisé
+const Icon = ({ name, size = 24, color = 'gray' }) => (
+    <MaterialCommunityIcons name={name} size={size} color={color} />
+);
+
+// CORRECTION 2: Suppression du composant DashboardHeader qui était non utilisé et non fonctionnel
+// en l'état car 'Image' n'était pas importé.
+// const DashboardHeader = () => (
+//   <View style={styles.dashboardHeader}>
+//     <Image
+//       source={require('../../assets/images/rsu-gabon-logo.png')}
+//       style={styles.headerLogo}
+//       resizeMode="contain"
+//     />
+//     <View style={styles.headerText}>
+//       <Title style={styles.headerTitle}>RSU Gabon</Title>
+//       <Paragraph style={styles.headerSubtitle}>Tableau de bord</Paragraph>
+//     </View>
+//   </View>
+// );
 
 export default function DashboardScreen({ navigation }) {
   const [user, setUser] = useState(null);
@@ -51,7 +74,7 @@ export default function DashboardScreen({ navigation }) {
 
       // Charger statistiques
       await loadStats();
-      
+
       // Charger activité récente
       await loadRecentActivity();
     } catch (error) {
@@ -65,7 +88,7 @@ export default function DashboardScreen({ navigation }) {
     try {
       // Statistiques locales (offline)
       const pendingCount = await syncService.getPendingCount();
-      
+
       // Tentative récupération stats serveur
       try {
         const response = await apiClient.get('/dashboard/surveyor-stats/');
@@ -97,13 +120,13 @@ export default function DashboardScreen({ navigation }) {
         .map(item => ({
           id: item.id,
           type: item.type,
-          title: item.type === 'enrollment' 
+          title: item.type === 'enrollment'
             ? `${item.data.person.firstName} ${item.data.person.lastName}`
             : item.type,
           subtitle: format(new Date(item.timestamp), 'dd/MM/yyyy HH:mm', { locale: fr }),
           status: item.status,
         }));
-      
+
       setRecentActivity(recentItems);
     } catch (error) {
       console.error('Erreur activité récente:', error);
@@ -120,7 +143,7 @@ export default function DashboardScreen({ navigation }) {
     try {
       const result = await syncService.syncPendingData();
       await loadStats(); // Recharger stats après sync
-      
+
       if (result.success > 0) {
         // Afficher notification de succès
       }
@@ -129,10 +152,15 @@ export default function DashboardScreen({ navigation }) {
     }
   };
 
+  const handleNavigate = (screenName) => {
+    navigation.navigate(screenName);
+  }
+
+
   if (loading && !user) {
     return (
       <View style={styles.loadingContainer}>
-        <Avatar.Icon size={64} icon="loading" />
+        <Avatar.Icon size={64} icon="autorenew" />
         <Paragraph>Chargement...</Paragraph>
       </View>
     );
@@ -172,7 +200,7 @@ export default function DashboardScreen({ navigation }) {
       <View style={styles.statsContainer}>
         <Card style={styles.statCard}>
           <Card.Content style={styles.statContent}>
-            <Icon name="today" size={32} color="#2E7D32" />
+            <Icon name="calendar-today" size={32} color="#2E7D32" />
             <Title style={styles.statNumber}>{stats.todayEnrollments}</Title>
             <Paragraph style={styles.statLabel}>Aujourd'hui</Paragraph>
           </Card.Content>
@@ -180,7 +208,7 @@ export default function DashboardScreen({ navigation }) {
 
         <Card style={styles.statCard}>
           <Card.Content style={styles.statContent}>
-            <Icon name="people" size={32} color="#1976D2" />
+            <Icon name="account-group" size={32} color="#1976D2" />
             <Title style={styles.statNumber}>{stats.totalEnrollments}</Title>
             <Paragraph style={styles.statLabel}>Total</Paragraph>
           </Card.Content>
@@ -224,47 +252,35 @@ export default function DashboardScreen({ navigation }) {
       <Card style={styles.actionsCard}>
         <Card.Content>
           <Title style={styles.actionsTitle}>Actions rapides</Title>
-          
+
           <View style={styles.actionsList}>
-            <Button
-              mode="contained"
-              onPress={() => navigation.navigate('Enrollment')}
-              style={styles.actionButton}
-              contentStyle={styles.actionButtonContent}
-              icon="person-add"
-            >
-              Nouvelle Inscription
-            </Button>
-
-            <Button
-              mode="outlined"
-              onPress={() => navigation.navigate('Persons')}
-              style={styles.actionButton}
-              contentStyle={styles.actionButtonContent}
-              icon="people"
-            >
-              Consulter Personnes
-            </Button>
-
-            <Button
-              mode="outlined"
-              onPress={() => navigation.navigate('Surveys')}
-              style={styles.actionButton}
-              contentStyle={styles.actionButtonContent}
-              icon="assignment"
-            >
-              Enquêtes Terrain
-            </Button>
-
-            <Button
-              mode="outlined"
-              onPress={() => navigation.navigate('Sync')}
-              style={styles.actionButton}
-              contentStyle={styles.actionButtonContent}
-              icon="sync"
-            >
-              Synchronisation
-            </Button>
+             <Button
+                mode="outlined"
+                onPress={() => handleNavigate('Enrollment')}
+                style={styles.actionButton}
+                icon="account-plus"
+                contentStyle={styles.actionButtonContent}
+              >
+                Nouvel Enregistrement
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={() => handleNavigate('Surveys')}
+                style={styles.actionButton}
+                icon="file-document"
+                contentStyle={styles.actionButtonContent}
+              >
+                Liste des Enquêtes
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={() => handleNavigate('Persons')}
+                style={styles.actionButton}
+                icon="account-group"
+                contentStyle={styles.actionButtonContent}
+              >
+                Liste des Personnes
+              </Button>
           </View>
         </Card.Content>
       </Card>
@@ -273,7 +289,7 @@ export default function DashboardScreen({ navigation }) {
       <Card style={styles.activityCard}>
         <Card.Content>
           <Title style={styles.activityTitle}>Activité récente</Title>
-          
+
           {recentActivity.length === 0 ? (
             <Paragraph style={styles.noActivity}>
               Aucune activité récente
@@ -287,7 +303,7 @@ export default function DashboardScreen({ navigation }) {
                   left={() => (
                     <Avatar.Icon
                       size={40}
-                      icon={item.type === 'enrollment' ? 'person-add' : 'assignment'}
+                      icon={item.type === 'enrollment' ? 'account-plus' : 'file-document'}
                       style={styles.activityIcon}
                     />
                   )}
@@ -316,20 +332,20 @@ export default function DashboardScreen({ navigation }) {
       <Card style={styles.systemCard}>
         <Card.Content>
           <Title style={styles.systemTitle}>Informations système</Title>
-          
+
           <View style={styles.systemInfo}>
             <Paragraph>
-              <Icon name="info" size={16} /> Version: 1.0.0
+              <Icon name="information" size={16} /> Version: 1.0.0
             </Paragraph>
             <Paragraph>
-              <Icon name="schedule" /> Dernière sync: {
+              <Icon name="clock" size={16} /> Dernière sync: {
                 stats.lastSync
                   ? format(new Date(stats.lastSync), 'dd/MM/yyyy HH:mm', { locale: fr })
                   : 'Jamais'
               }
             </Paragraph>
             <Paragraph>
-              <Icon name="storage" /> Stockage local: {stats.pendingSync} éléments
+              <Icon name="database" size={16} /> Stockage local: {stats.pendingSync} éléments
             </Paragraph>
           </View>
         </Card.Content>
@@ -338,144 +354,173 @@ export default function DashboardScreen({ navigation }) {
   );
 }
 
+// CORRECTION 3: Regroupement de TOUS les styles dans l'objet StyleSheet.create final.
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  userCard: {
-    marginBottom: 16,
-    elevation: 4,
-  },
-  userContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    backgroundColor: '#2E7D32',
-    marginRight: 16,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  userRole: {
-    color: '#666',
-    marginBottom: 2,
-  },
-  userEmail: {
-    fontSize: 12,
-    color: '#888',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  statCard: {
-    flex: 1,
-    marginHorizontal: 4,
-    elevation: 2,
-  },
-  statContent: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  syncCard: {
-    marginBottom: 16,
-    backgroundColor: '#FFF8E1',
-    elevation: 3,
-  },
-  syncHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  syncTitle: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: '#F57F17',
-  },
-  syncDescription: {
-    marginBottom: 12,
-    color: '#666',
-  },
-  syncButton: {
-    backgroundColor: '#FF9800',
-  },
-  actionsCard: {
-    marginBottom: 16,
-    elevation: 3,
-  },
-  actionsTitle: {
-    marginBottom: 16,
-  },
-  actionsList: {
-    gap: 12,
-  },
-  actionButton: {
-    marginBottom: 8,
-  },
-  actionButtonContent: {
-    paddingVertical: 8,
-  },
-  activityCard: {
-    marginBottom: 16,
-    elevation: 2,
-  },
-  activityTitle: {
-    marginBottom: 12,
-  },
-  noActivity: {
-    textAlign: 'center',
-    color: '#666',
-    fontStyle: 'italic',
-    paddingVertical: 20,
-  },
-  activityIcon: {
-    backgroundColor: '#E3F2FD',
-  },
-  statusChip: {
-    marginTop: 8,
-  },
-  syncedChip: {
-    backgroundColor: '#E8F5E8',
-  },
-  failedChip: {
-    backgroundColor: '#FFEBEE',
-  },
-  systemCard: {
-    marginBottom: 16,
-    elevation: 1,
-  },
-  systemTitle: {
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  systemInfo: {
-    gap: 4,
-  },
+    // Styles pour l'en-tête (gardés au cas où ils seraient utilisés)
+    dashboardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        backgroundColor: '#2E7D32',
+        elevation: 4,
+    },
+    headerLogo: {
+        width: 50,
+        height: 50,
+        marginRight: 12,
+    },
+    headerText: {
+        flex: 1,
+    },
+    headerTitle: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    headerSubtitle: {
+        color: '#E8F5E8',
+        fontSize: 14,
+    },
+
+    // Styles du DashboardScreen
+    container: {
+        flex: 1,
+        backgroundColor: '#f5f5f5',
+    },
+    contentContainer: {
+        padding: 16,
+        paddingBottom: 100,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    userCard: {
+        marginBottom: 16,
+        elevation: 4,
+    },
+    userContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    avatar: {
+        backgroundColor: '#2E7D32',
+        marginRight: 16,
+    },
+    userInfo: {
+        flex: 1,
+    },
+    userName: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    userRole: {
+        color: '#666',
+        marginBottom: 2,
+    },
+    userEmail: {
+        fontSize: 12,
+        color: '#888',
+    },
+    statsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+    },
+    statCard: {
+        flex: 1,
+        marginHorizontal: 4,
+        elevation: 2,
+    },
+    statContent: {
+        alignItems: 'center',
+        paddingVertical: 16,
+    },
+    statNumber: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginVertical: 4,
+    },
+    statLabel: {
+        fontSize: 12,
+        color: '#666',
+        textAlign: 'center',
+    },
+    syncCard: {
+        marginBottom: 16,
+        backgroundColor: '#FFF8E1',
+        elevation: 3,
+    },
+    syncHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    syncTitle: {
+        marginLeft: 8,
+        fontSize: 16,
+        color: '#F57F17',
+    },
+    syncDescription: {
+        marginBottom: 12,
+        color: '#666',
+    },
+    syncButton: {
+        backgroundColor: '#FF9800',
+    },
+    actionsCard: {
+        marginBottom: 16,
+        elevation: 3,
+    },
+    actionsTitle: {
+        marginBottom: 16,
+    },
+    actionsList: {
+        flexDirection: 'column',
+        gap: 12,
+    },
+    actionButton: {
+        marginBottom: 8,
+    },
+    actionButtonContent: {
+        paddingVertical: 8,
+    },
+    activityCard: {
+        marginBottom: 16,
+        elevation: 2,
+    },
+    activityTitle: {
+        marginBottom: 12,
+    },
+    noActivity: {
+        textAlign: 'center',
+        color: '#666',
+        fontStyle: 'italic',
+        paddingVertical: 20,
+    },
+    activityIcon: {
+        backgroundColor: '#E3F2FD',
+    },
+    statusChip: {
+        marginTop: 8,
+    },
+    syncedChip: {
+        backgroundColor: '#E8F5E8',
+    },
+    failedChip: {
+        backgroundColor: '#FFEBEE',
+    },
+    systemCard: {
+        marginBottom: 16,
+        elevation: 1,
+    },
+    systemTitle: {
+        fontSize: 16,
+        marginBottom: 12,
+    },
+    systemInfo: {
+        gap: 4,
+    },
 });

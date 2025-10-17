@@ -1,19 +1,21 @@
 # rsu_identity/settings/production.py
-from .development import *
 import os
 import dj_database_url
+from .base import *
 
 # Production overrides
 DEBUG = False
-SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-secret')
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
+# Hosts Railway
 ALLOWED_HOSTS = [
     '.railway.app',
+    'rsu-gabon-backend-production.up.railway.app',
     'localhost',
     '127.0.0.1'
 ]
 
-# Database PostgreSQL Railway
+# Database Railway PostgreSQL
 if 'DATABASE_URL' in os.environ:
     DATABASES = {
         'default': dj_database_url.parse(
@@ -22,18 +24,17 @@ if 'DATABASE_URL' in os.environ:
         )
     }
 
-# CORS
+# CORS pour mobile
 CORS_ALLOWED_ORIGINS = [
-    "https://rsu-gabon-backend-production.railway.app",
+    "https://rsu-gabon-backend-production.up.railway.app",
     "http://localhost:19000",
     "http://192.168.1.69:19000",
 ]
 
-# Static files
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+# Désactiver collectstatic si problème
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Logging
+# Logging simple pour Railway
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -42,10 +43,8 @@ LOGGING = {
             'class': 'logging.StreamHandler',
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
-        },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
     },
 }
