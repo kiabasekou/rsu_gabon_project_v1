@@ -1,0 +1,213 @@
+# =============================================================================
+# 🇬🇦 RSU GABON - .gitignore Complet et Optimisé
+# =============================================================================
+
+# =============================================================================
+# 1. DEPENDANCES, BINAIRES & CACHE (FRONT & BACK)
+# =============================================================================
+# NODE
+node_modules
+.expo
+node_modules
+/npm-debug.log*
+/yarn-debug.log*
+/yarn-error.log*
+/lerna-debug.log*
+.npm
+.yarn-integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp
+.pnp.js
+.pnpm-debug.log*
+
+# PYTHON
+/venv
+/ENV
+/env
+/.venv
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+/build/
+/dist/
+/develop-eggs/
+/eggs/
+/.eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# =============================================================================
+# 2. EXPO & REACT NATIVE (FRONTEND MOBILE)
+# =============================================================================
+# Cache & Conf. Expo
+.expo/
+.expo-shared/
+.metro-health-check*
+expo-env.d.ts
+
+# Sorties de build
+/web-build/
+/build/
+/dist/
+/android/app/build/
+/android/build/
+/ios/build/
+/ios/Pods/
+/ios/DerivedData/
+
+# Fichiers de configuration locaux Android/iOS
+android/.gradle
+android/captures/
+android/gradlew*
+android/local.properties
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Clés de build & Secrets mobile
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+
+# =============================================================================
+# 3. DJANGO & ENVIRONNEMENT (BACKEND)
+# =============================================================================
+# Django / Fichiers générés
+/db.sqlite3
+/db.sqlite3-journal
+/media                # Fichiers téléchargés par les utilisateurs
+/static               # Assets statiques collectés
+/staticfiles
+*.log
+
+# Fichiers Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Fichiers de traduction
+*.mo
+*.pot
+
+# =============================================================================
+# 4. SECRETS & CONFIGURATION SENSIBLE (CRITIQUE RSU)
+# =============================================================================
+# Environnement et Secrets (Règle d'or : ignorer TOUT .env sauf l'exemple)
+.env
+.env.*
+!*.env.example
+!*.env.template
+
+# Configuration sensible non standard
+secrets/
+*.pem
+*.pfx
+config/secrets.yml
+config/database.yml
+credentials.json
+service-account.json
+data/sensitive/
+
+# Dumps de base de données
+*.dump
+*.sql
+*.sql.gz
+*.psql.gz
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# =============================================================================
+# 5. IDES, CACHE DE DÉV. & TESTS
+# =============================================================================
+# IDEs (VSCode, IntelliJ, PyCharm, etc.)
+.vscode/
+.idea/
+*.iml
+*.iws
+*.code-workspace
+
+# Cache divers
+.cache/
+.tox/
+.nox/
+.pytest_cache/
+.sentryclirc
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_*/
+
+# Rapports de couverture
+/coverage/
+.coverage*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+
+# =============================================================================
+# 6. SYSTÈME D'EXPLOITATION & TEMPORAIRE
+# =============================================================================
+# Windows
+Thumbs.db
+ehthumbs*.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Temporaires et Backups
+*~
+\#*\#
+*.bak
+*.backup
+*.old
+*.orig
+*.swp
+*.swo
+/tmp/
+/temp/
+*.tmp
+*.temp
+
+# =============================================================================
+# 7. EXCEPTIONS (Fichiers à conserver)
+# =============================================================================
+# Règles inversées pour garder certains fichiers ignorés par les règles larges ci-dessus
+!.gitkeep
+!README.md
+!LICENSE
+!CHANGELOG.md
+
+# Garder les templates d'environnement et les configurations essentielles
+!package.json
+!package-lock.json
+!yarn.lock
+!.env.example
+!.env.template
+
+# Garder les fixtures de démo (si nécessaire)
+!**/fixtures/demo_*.json
+
+# Garder les migrations initiales (souvent nécessaires pour le setup)
+!**/migrations/0001_initial.py
+!**/migrations/__init__.py
