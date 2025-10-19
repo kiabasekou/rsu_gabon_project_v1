@@ -1,0 +1,24 @@
+# =============================================================================
+# 🇬🇦 RSU GABON - Railway Configuration
+# Fichier: rsu_gabon_project/railway.toml (À LA RACINE du repo Git)
+# =============================================================================
+
+[build]
+  # ✅ Pointer vers le sous-répertoire backend
+  builder = "dockerfile"
+  dockerfilePath = "rsu_identity_backend/Dockerfile"
+  
+  # ✅ Définir le contexte de build
+  buildContext = "rsu_identity_backend"
+
+[deploy]
+  # Healthcheck
+  healthcheckPath = "/health/"
+  healthcheckTimeout = 100
+  
+  # Politique de redémarrage
+  restartPolicyType = "on_failure"
+  restartPolicyMaxRetries = 3
+  
+  # Timeout de démarrage
+  startCommand = "gunicorn --bind 0.0.0.0:8000 rsu_identity.wsgi:application"
