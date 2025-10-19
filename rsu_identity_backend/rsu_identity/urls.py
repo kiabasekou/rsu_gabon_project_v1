@@ -23,6 +23,9 @@ from rest_framework import status
 
 from django.http import JsonResponse
 
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+
 
 
 def simple_health(request):
@@ -87,7 +90,9 @@ urlpatterns = [
     
     # Health Check
     #path('health/', include('health_check.urls')),
-    path('health/', health_check),  # Healthcheck Railway
+    
+    # Health Check Railway (SIMPLE - pas de DB check)
+    path('health/', health_check, name='health-check'),
 
     path('', lambda r: JsonResponse({"message": "RSU Gabon API"})),
 
@@ -108,11 +113,16 @@ if settings.DEBUG:
         ] + urlpatterns
 
 
+@csrf_exempt
+@require_http_methods(["GET", "HEAD"])
 def health_check(request):
-    """Health check pour Railway"""
+    """
+    Health check simple pour Railway
+    Retourne toujours 200 OK sans vérifier la DB
+    """
     return JsonResponse({
-        'status': 'healthy',
-        'service': 'rsu-gabon-backend', 
-        'version': '1.0.0'
-    })
+        "status": "healthy",
+        "service": "RSU Gabon Backend",
+        "version": "1.0.0"
+    }, status=200)
 
