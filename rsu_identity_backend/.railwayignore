@@ -1,7 +1,43 @@
-venv/
+# Development
+.env
+.env.local
+.env.development
 *.pyc
 __pycache__/
-.git/
-node_modules/
-.env
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
 *.log
+logs/
+
+# Database
+db.sqlite3
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+README.md
+*.md
+
+# Tests
+test_*.py
+*_test.py
+tests/
+
+# Virtual env
+venv/
+env/

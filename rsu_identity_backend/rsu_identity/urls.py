@@ -23,8 +23,7 @@ from rest_framework import status
 
 from django.http import JsonResponse
 
-def health_check(request):
-    return JsonResponse({"status": "healthy", "service": "RSU Gabon Backend"})
+
 
 def simple_health(request):
     return JsonResponse({"status": "ok", "message": "Railway test"})
@@ -107,3 +106,13 @@ if settings.DEBUG:
         urlpatterns = [
             path('__debug__/', include(debug_toolbar.urls)),
         ] + urlpatterns
+
+
+def health_check(request):
+    """Health check pour Railway"""
+    return JsonResponse({
+        'status': 'healthy',
+        'service': 'rsu-gabon-backend', 
+        'version': '1.0.0'
+    })
+

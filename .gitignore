@@ -6,7 +6,9 @@
 # 1. DEPENDANCES, BINAIRES & CACHE (FRONT & BACK)
 # =============================================================================
 # NODE
-/node_modules
+rsu-mobile-surveyor/node_modules
+rsu-mobile-surveyor/.expo
+rsu_admin_dashboard/node_modules
 /npm-debug.log*
 /yarn-debug.log*
 /yarn-error.log*
@@ -22,10 +24,10 @@
 .pnpm-debug.log*
 
 # PYTHON
-/venv
-/ENV
-/env
-/.venv
+rsu_identity_backend/venv
+rsu_identity_backend/ENV
+rsu_identity_backend/env
+rsu_identity_backend/.venv
 __pycache__/
 *.py[cod]
 *$py.class
