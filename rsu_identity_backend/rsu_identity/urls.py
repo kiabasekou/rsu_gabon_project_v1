@@ -23,8 +23,11 @@ from rest_framework import status
 
 from django.http import JsonResponse
 
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+
+def health_check(request):
+    """Health check ultra-simple - ne vérifie RIEN"""
+    return HttpResponse("OK", status=200, content_type="text/plain")
 
 
 
@@ -113,16 +116,5 @@ if settings.DEBUG:
         ] + urlpatterns
 
 
-@csrf_exempt
-@require_http_methods(["GET", "HEAD"])
-def health_check(request):
-    """
-    Health check simple pour Railway
-    Retourne toujours 200 OK sans vérifier la DB
-    """
-    return JsonResponse({
-        "status": "healthy",
-        "service": "RSU Gabon Backend",
-        "version": "1.0.0"
-    }, status=200)
+
 
