@@ -49,11 +49,18 @@ COPY . .
 # =============================================================================
 # Configuration PRODUCTION pour collectstatic
 # =============================================================================
+# ✅ Utiliser ARG pour passer SECRET_KEY au build (sera écrasée au runtime)
+ARG SECRET_KEY=dummy-build-secret-key-will-be-replaced-at-runtime
+
 # ✅ Définir explicitement DJANGO_SETTINGS_MODULE pour collectstatic
-ENV DJANGO_SETTINGS_MODULE=rsu_identity.settings.production
+ENV DJANGO_SETTINGS_MODULE=rsu_identity.settings.production \
+    SECRET_KEY=${SECRET_KEY}
 
 # Collecte des fichiers statiques avec les bons settings
 RUN python manage.py collectstatic --noinput --verbosity 2
+
+# ⚠️ Nettoyer la variable après collectstatic (sécurité)
+ENV SECRET_KEY=""
 
 # Création des répertoires nécessaires
 RUN mkdir -p /var/log/rsu /app/media

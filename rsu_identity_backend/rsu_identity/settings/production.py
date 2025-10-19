@@ -3,6 +3,7 @@
 # Standards Top 1% - Configuration Railway Optimisée
 # =============================================================================
 import os
+import sys
 import dj_database_url
 from .base import *
 
@@ -10,11 +11,17 @@ from .base import *
 # 1. SÉCURITÉ & DEBUG
 # =============================================================================
 DEBUG = False
-SECRET_KEY = os.environ.get('SECRET_KEY')
 
-# Validation stricte
-if not SECRET_KEY:
-    raise ValueError("❌ SECRET_KEY manquante en production!")
+# Secret Key avec fallback pour collectstatic pendant le build Docker
+SECRET_KEY = os.environ.get('SECRET_KEY', 'temp-build-key-for-collectstatic-only')
+
+# Validation stricte uniquement si on n'est PAS en train de faire collectstatic
+if 'collectstatic' not in sys.argv:
+    if not os.environ.get('SECRET_KEY') or SECRET_KEY == 'temp-build-key-for-collectstatic-only':
+        raise ValueError(
+            "❌ SECRET_KEY manquante en production!\n"
+            "   Définissez la variable d'environnement SECRET_KEY sur Railway."
+        )
 
 # =============================================================================
 # 2. HOSTS AUTORISÉS
@@ -42,7 +49,17 @@ if 'DATABASE_URL' in os.environ:
             conn_health_checks=True,
         )
     }
-    print("✅ DATABASE: PostgreSQL (Memory cache)")
+    print("✅ DATABASE: PostgreSQL")
+else:
+    # Fallback pour collectstatic pendant le build (ne sera jamais utilisé en runtime)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': '/tmp/temp-build-db.sqlite3',
+        }
+    }
+    if 'collectstatic' not in sys.argv:
+        print("⚠️  WARNING: DATABASE_URL non définie!")
 
 # =============================================================================
 # 4. STATIC & MEDIA FILES (Django 5.0 Syntax)
@@ -92,7 +109,8 @@ else:
             'LOCATION': 'rsu-production-cache',
         }
     }
-    print("⚠️  Cache: LocMem (Redis recommandé)")
+    if 'collectstatic' not in sys.argv:
+        print("✅ Cache: LocMem (Redis recommandé)")
 
 # =============================================================================
 # 6. CORS - CONFIGURATION MOBILE
@@ -116,7 +134,8 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-print(f"✅ CORS Origins: {len(CORS_ALLOWED_ORIGINS)} autorisées")
+if 'collectstatic' not in sys.argv:
+    print(f"✅ CORS Origins: {len(CORS_ALLOWED_ORIGINS)} autorisées")
 
 # =============================================================================
 # 7. LOGGING - RAILWAY OPTIMISÉ
@@ -163,7 +182,8 @@ LOGGING = {
     },
 }
 
-print("✅ Logging: Console configuré")
+if 'collectstatic' not in sys.argv:
+    print("✅ Logging: Console configuré")
 
 # =============================================================================
 # 8. EMAIL - CONFIGURATION (À adapter selon provider)
@@ -176,10 +196,12 @@ if os.environ.get('EMAIL_HOST'):
     EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
     DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@rsu-gabon.ga')
-    print("✅ Email: SMTP configuré")
+    if 'collectstatic' not in sys.argv:
+        print("✅ Email: SMTP configuré")
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    print("✅ Email: Console")
+    if 'collectstatic' not in sys.argv:
+        print("✅ Email: Console")
 
 # =============================================================================
 # 9. SÉCURITÉ RENFORCÉE
@@ -209,15 +231,18 @@ if SENTRY_DSN:
         send_default_pii=False,
         environment='production',
     )
-    print("✅ Monitoring: Sentry activé")
+    if 'collectstatic' not in sys.argv:
+        print("✅ Monitoring: Sentry activé")
 else:
-    print("✅ Monitoring: Logs only")
+    if 'collectstatic' not in sys.argv:
+        print("✅ Monitoring: Logs only")
 
 # =============================================================================
 # 11. PERFORMANCE
 # =============================================================================
 # Compression Gzip
-MIDDLEWARE += ['django.middleware.gzip.GZipMiddleware']
+if 'django.middleware.gzip.GZipMiddleware' not in MIDDLEWARE:
+    MIDDLEWARE.insert(0, 'django.middleware.gzip.GZipMiddleware')
 
 # Connection pooling
 CONN_MAX_AGE = 600
@@ -225,6 +250,8 @@ CONN_MAX_AGE = 600
 # Session engine optimisé
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
-print("\n" + "="*70)
-print("🇬🇦 RSU GABON BACKEND - PRODUCTION MODE READY")
-print("="*70 + "\n")
+# Message final uniquement si pas collectstatic
+if 'collectstatic' not in sys.argv:
+    print("\n" + "="*70)
+    print("🇬🇦 RSU GABON BACKEND - PRODUCTION MODE READY")
+    print("="*70 + "\n")
